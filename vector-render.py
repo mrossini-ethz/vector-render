@@ -872,7 +872,7 @@ class VectorRender(bpy.types.Operator):
                 edgelist.pop(i)
                 edgelist_len -= 1
 
-        m = metapost("output.mp")
+        m = metapost(scene.vector_render_file)
 
         if hidden_line_removal:
             # Determine the edge intersection points
@@ -915,9 +915,10 @@ class VectorRenderPanel(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_context = "render"
 
+    bpy.types.Scene.vector_render_file = bpy.props.StringProperty(name = "Output", subtype="FILE_PATH")
     bpy.types.Scene.vector_render_size = bpy.props.FloatProperty(name = "Size", default = 10, soft_min = 0, min = 0.001)
-    bpy.types.Scene.vector_render_size_unit = bpy.props.EnumProperty(items = [("cm", "cm", "cm"), ("pt", "pt", "pt")], name = "Unit")
-    bpy.types.Scene.vector_render_hidden_lines = bpy.props.EnumProperty(items = [("HIDE", "hide", "hide"), ("SHOW", "show", "show"), ("DASH", "dash", "dash")], name = "Hidden lines")
+    bpy.types.Scene.vector_render_size_unit = bpy.props.EnumProperty(items = [("cm", "cm", "cm"), ("mm", "mm", "mm"), ("pt", "pt", "pt")], name = "Unit")
+    bpy.types.Scene.vector_render_hidden_lines = bpy.props.EnumProperty(items = [("HIDE", "Hide", "hide"), ("SHOW", "Show", "show"), ("DASH", "Dash", "dash")], name = "Hidden lines")
     bpy.types.Scene.vector_render_plane_edges = bpy.props.BoolProperty(name = "Remove plane edges", default = True)
     bpy.types.Scene.vector_render_plane_edges_angle = bpy.props.FloatProperty(name = "Edge angle", default = 0.0, soft_min = 0, min = 0.001)
     bpy.types.Scene.vector_render_draw_edges = bpy.props.BoolProperty(name = "Draw edges", default = True)
@@ -928,26 +929,27 @@ class VectorRenderPanel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        row = layout.row()
+        col = layout.column()
+        col.prop(context.scene, "vector_render_file")
+        col.separator()
+
+        row = col.row(align = True)
         row.prop(context.scene, "vector_render_size")
-        row = layout.row()
         row.prop(context.scene, "vector_render_size_unit")
-        row = layout.row()
-        row.prop(context.scene, "vector_render_hidden_lines")
-        row = layout.row()
-        row.prop(context.scene, "vector_render_plane_edges")
-        row = layout.row()
-        row.prop(context.scene, "vector_render_plane_edges_angle")
-        row = layout.row()
-        row.prop(context.scene, "vector_render_draw_edges")
-        row = layout.row()
-        row.prop(context.scene, "vector_render_draw_faces")
-        row = layout.row()
-        row.prop(context.scene, "vector_render_use_lights")
-        row = layout.row()
-        row.prop(context.scene, "vector_render_color_lines")
-        row = layout.row()
-        row.operator("render.vector_render")
+        col.separator()
+
+        col.prop(context.scene, "vector_render_draw_edges")
+        col.prop(context.scene, "vector_render_hidden_lines")
+        col.prop(context.scene, "vector_render_plane_edges")
+        col.prop(context.scene, "vector_render_plane_edges_angle")
+        col.prop(context.scene, "vector_render_color_lines")
+        col.separator()
+
+        col.prop(context.scene, "vector_render_draw_faces")
+        col.prop(context.scene, "vector_render_use_lights")
+        col.separator()
+
+        col.operator("render.vector_render")
 
 def register():
     bpy.utils.register_class(VectorRender)
