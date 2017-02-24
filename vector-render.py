@@ -1,6 +1,6 @@
 import bpy
 import mathutils
-from math import cos, pi
+from math import cos, pi, degrees
 
 # BINARY TREE -------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -126,6 +126,32 @@ class metapost:
         else:
             colour = "(%f, %f, %f)" % (colour[0], colour[1], colour[2])
         self.f.write("--cycle withcolor %s;\n" % (colour))
+    def label(self, text, pos, ax, ay, rotation):
+        print(ax, ay)
+        suffix = ""
+        # Note: Align is reversed in metapost
+        if ay == "BOTTOM" or ay == "TOP_BASELINE":
+            if ax == "RIGHT":
+                suffix = ".ulft"
+            elif ax == "CENTER" or "JUSTIFY" or "FLUSH":
+                suffix = ".top"
+            elif ax == "LEFT":
+                suffix = ".urt"
+        elif ay == "CENTER":
+            if ax == "RIGHT":
+                suffix = ".lft"
+            elif ax == "CENTER" or "JUSTIFY" or "FLUSH":
+                suffix = ""
+            elif ax == "LEFT":
+                suffix = ".rt"
+        elif ay == "TOP":
+            if ax == "RIGHT":
+                suffix = ".llft"
+            elif ax == "CENTER" or "JUSTIFY" or "FLUSH":
+                suffix = ".bot"
+            elif ax == "LEFT":
+                suffix = ".lrt"
+        self.f.write("label%s(%s, (0, 0)) rotated %f shifted (%f u, %f u);\n" % (suffix, text, rotation, -pos[1] * self.scale, pos[2] * self.scale))
     def set_linewidth(self, val):
         self.f.write("pickup pencircle scaled %f pt;\n" % (val))
     def __del__(self):
@@ -713,6 +739,23 @@ class polygon:
             m.polydraw(segs_closed, self.colour[1])
             m.polyfill(segs, self.colour[1])
 
+# LABEL -------------------------------------------------------------------------------------------------------------------------------------------------------
+
+class label():
+    def __init__(self, text, position, rotation, align_x, align_y):
+        self.text = text
+        self.position = position
+        self.position_proj = None
+        self.align_x = align_x
+        self.align_y = align_y
+        self.rotation = rotation
+    def project(self, p):
+        print(self.position)
+        self.position_proj = p.project(self.position)
+        print(self.position_proj)
+    def draw(self, m):
+        m.label(self.text, self.position_proj, self.align_x, self.align_y, self.rotation)
+
 # OBJECT TRANSFORM --------------------------------------------------------------------------------------------------------------------------------------------
 
 def object_transform(vertex, position, rotation, scale):
@@ -753,6 +796,7 @@ class VectorRender(bpy.types.Operator):
             draw_hidden_lines = True
         draw_wireframe = scene.vector_render_draw_edges
         fill_polygons = scene.vector_render_draw_faces
+        draw_labels = True
 
         # Get the scene
         # FIXME: use correct scene
@@ -765,6 +809,7 @@ class VectorRender(bpy.types.Operator):
         polytree = None
         edgelist = []
         edgetree = None
+        labellist = []
 
         # Get the mesh data from all visible objects in the scene
         print("Reading geometry ...")
@@ -776,7 +821,7 @@ class VectorRender(bpy.types.Operator):
             # Filter hidden objects
             if object.hide_render or not object.is_visible(scene):
                 continue
-            print("Reading", object.name, "...")
+            print("- Reading", object.name, "...")
             object_pos = object.location
             object_rot = object.rotation_euler
             object_scl = object.scale
@@ -822,6 +867,20 @@ class VectorRender(bpy.types.Operator):
                     else:
                         edgetree.get_identical(e).add_polygon(poly_obj)
 
+        # Get the text data from all visible text objects in the scene
+        print("Reading labels ...")
+        for object in scene.objects:
+            # Filter non-curve objects
+            if not object.type == "FONT":
+                continue
+            # Filter hidden objects
+            if object.hide_render or not object.is_visible(scene):
+                continue
+            # Get the text of the object
+            print("- Reading", object.name, "...")
+            lb = label(object.data.body, object.location, degrees(object.rotation_euler.x), object.data.align_x, object.data.align_y)
+            labellist.append(lb)
+
         # Test for geometry
         if not edgetree:
             self.report({'ERROR'}, "No geometry to render.")
@@ -842,6 +901,10 @@ class VectorRender(bpy.types.Operator):
         print("Projecting polygons ...")
         for poly in polylist:
             poly.project(p)
+
+        print("Projecting labels ...")
+        for lb in labellist:
+            lb.project(p)
 
         # Remove of optional edges
         if remove_plane_edges and edge_angle_limit == 0.0:
@@ -904,6 +967,11 @@ class VectorRender(bpy.types.Operator):
         if draw_wireframe:
             for e in edgelist:
                 e.draw(m, hidden = False)
+
+        # Draw labels
+        if draw_labels:
+            for lb in labellist:
+                lb.draw(m)
 
         return {'FINISHED'}
 
