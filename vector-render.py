@@ -1,6 +1,6 @@
 import bpy
 import mathutils
-from math import cos, pi, degrees
+from math import cos, pi, degrees, tan
 
 # BINARY TREE -------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -245,6 +245,12 @@ class projector:
         self.rot = euler.to_matrix()
         self.roti = self.rot.inverted()
 
+        # Calculate the scale factor
+        if self.mode == "PERSP":
+            self.scale = camera.data.lens / camera.data.sensor_width
+        else:
+            self.scale = 1.0 / camera.data.ortho_scale
+
     def transform_to_camera_coords(self, vec):
         return self.roti * vec - self.roti * self.cp
 
@@ -254,15 +260,15 @@ class projector:
         # Perform the projection (z, x, -y)
         if self.mode == "PERSP":
             # Perspective mode
-            d = res[2]
-            x = res[0] / abs(d)
-            y = res[1] / abs(d)
+            d = res[2] * self.scale
+            x = res[0] * self.scale / abs(d)
+            y = res[1] * self.scale / abs(d)
             return mathutils.Vector((res.length, x, y))
         elif self.mode == "ORTHO":
             # Orthographic mode
-            d = res[2]
-            x = res[0]
-            y = res[1]
+            d = res[2] * self.scale
+            x = res[0] * self.scale
+            y = res[1] * self.scale
             return mathutils.Vector((res.length, x, y))
         else:
             return res
