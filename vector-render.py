@@ -151,12 +151,10 @@ class metapost:
                 suffix = ".bot"
             elif ax == "LEFT":
                 suffix = ".lrt"
-        self.f.write("label%s(%s, (0, 0)) rotated %f shifted (%f u, %f u);\n" % (suffix, text, rotation, -pos[1] * self.scale, pos[2] * self.scale))
+        self.f.write("label%s(%s, (0, 0)) rotated %f shifted (%f u, %f u);\n" % (suffix, text, rotation, pos[1] * self.scale, pos[2] * self.scale))
     def set_linewidth(self, val):
         self.f.write("pickup pencircle scaled %f pt;\n" % (val))
     def __del__(self):
-        #self.f.write("drawarrow (0, -3cm)--(0, 3 cm) withcolor red;\n")
-        #self.f.write("drawarrow (-4cm, 0)--(4 cm, 0) withcolor red;\n")
         self.f.write("endfig;\nend\n")
 
 # BSP TREE ----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -247,21 +245,24 @@ class projector:
         self.rot = euler.to_matrix()
         self.roti = self.rot.inverted()
 
+    def transform_to_camera_coords(self, vec):
+        return self.roti * vec - self.roti * self.cp
+
     def project(self, v):
         # Convert the vector from global coordinates to camera coordinates
-        res = self.roti * v - self.roti * self.cp
+        res = self.transform_to_camera_coords(v)
         # Perform the projection (z, x, -y)
         if self.mode == "PERSP":
             # Perspective mode
             d = res[2]
-            x = +res[0] / d
-            y = -res[1] / d
+            x = res[0] / abs(d)
+            y = res[1] / abs(d)
             return mathutils.Vector((res.length, x, y))
         elif self.mode == "ORTHO":
             # Orthographic mode
-            d = +res[2]
-            x = -res[0]
-            y = +res[1]
+            d = res[2]
+            x = res[0]
+            y = res[1]
             return mathutils.Vector((res.length, x, y))
         else:
             return res
@@ -429,13 +430,13 @@ class edge:
             tb = self.intersections[i]
             if visibility_state == True and not hidden:
                 mp.polydraw([
-                                [-self.endpoints_proj[0][1] - ta * self.direction_proj[1], self.endpoints_proj[0][2] + ta * self.direction_proj[2]],
-                                [-self.endpoints_proj[0][1] - tb * self.direction_proj[1], self.endpoints_proj[0][2] + tb * self.direction_proj[2]]
+                                [self.endpoints_proj[0][1] + ta * self.direction_proj[1], self.endpoints_proj[0][2] + ta * self.direction_proj[2]],
+                                [self.endpoints_proj[0][1] + tb * self.direction_proj[1], self.endpoints_proj[0][2] + tb * self.direction_proj[2]]
                             ], self.colour)
             elif visibility_state == False and hidden:
                 mp.polydraw([
-                                [-self.endpoints_proj[0][1] - ta * self.direction_proj[1], self.endpoints_proj[0][2] + ta * self.direction_proj[2]],
-                                [-self.endpoints_proj[0][1] - tb * self.direction_proj[1], self.endpoints_proj[0][2] + tb * self.direction_proj[2]]
+                                [self.endpoints_proj[0][1] + ta * self.direction_proj[1], self.endpoints_proj[0][2] + ta * self.direction_proj[2]],
+                                [self.endpoints_proj[0][1] + tb * self.direction_proj[1], self.endpoints_proj[0][2] + tb * self.direction_proj[2]]
                             ], self.colour, hidden = True)
 
             # Reset the state
@@ -750,10 +751,10 @@ class polygon:
     def draw(self, m):
         segs = []
         for i in range(self.N):
-            segs.append([-self.qp[i][1], self.qp[i][2]])
+            segs.append([self.qp[i][1], self.qp[i][2]])
         segs_closed = []
         for i in range(self.N + 1):
-            segs_closed.append([-self.qp[i % self.N][1], self.qp[i % self.N][2]])
+            segs_closed.append([self.qp[i % self.N][1], self.qp[i % self.N][2]])
         if self.front_facing:
             m.polydraw(segs_closed, self.colour[0])
             m.polyfill(segs, self.colour[0])
