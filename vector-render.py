@@ -235,8 +235,9 @@ class bsp_node:
 # PROJECTOR ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 class projector:
-    def __init__(self, camera, mode = 0):
-        self.mode = mode
+    def __init__(self, camera):
+        # Camera mode (perspective / orthographic)
+        self.mode = camera.data.type
 
         # Location
         self.cp = camera.location
@@ -247,11 +248,20 @@ class projector:
         self.roti = self.rot.inverted()
 
     def project(self, v):
+        # Convert the vector from global coordinates to camera coordinates
         res = self.roti * v - self.roti * self.cp
-        if self.mode == 0:
+        # Perform the projection (z, x, -y)
+        if self.mode == "PERSP":
+            # Perspective mode
             d = res[2]
             x = +res[0] / d
             y = -res[1] / d
+            return mathutils.Vector((res.length, x, y))
+        elif self.mode == "ORTHO":
+            # Orthographic mode
+            d = +res[2]
+            x = +res[0]
+            y = -res[1]
             return mathutils.Vector((res.length, x, y))
         else:
             return res
