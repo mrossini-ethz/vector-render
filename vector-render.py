@@ -1,6 +1,6 @@
 import bpy
 import mathutils
-from math import cos, pi, degrees, tan
+from math import cos, degrees, radians
 
 # BINARY TREE -------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -935,8 +935,8 @@ class VectorRender(bpy.types.Operator):
 
         # Remove of optional edges
         if remove_plane_edges and edge_angle_limit == 0.0:
-            edge_angle_limit = 0.001
-        edge_angle_limit_cos = cos(edge_angle_limit * 2.0 * pi / 180.0)
+            edge_angle_limit = 0.05
+        edge_angle_limit_cos = cos(radians(edge_angle_limit))
         if remove_plane_edges:
             indices_for_removal = []
             i = edgelist_len - 1
