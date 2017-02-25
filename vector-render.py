@@ -260,8 +260,8 @@ class projector:
         elif self.mode == "ORTHO":
             # Orthographic mode
             d = +res[2]
-            x = +res[0]
-            y = -res[1]
+            x = -res[0]
+            y = +res[1]
             return mathutils.Vector((res.length, x, y))
         else:
             return res
@@ -354,10 +354,12 @@ class edge:
             e.intersections.append(t2)
 
     def check_visibility(self, polygon_list, proj, mp):
+        # Make an array to indicate the visibility for each segment of the edge
         self.visibility = []
+        # Sort the intersections of the edge by position so that segmets are between consecutive indices
         self.intersections.sort()
 
-        # Endpoint coordinates in camera coordinates
+        # Get the coordinates of the endpoints in camera coordinates
         x1 = self.endpoints_proj[0][0]
         y1 = self.endpoints_proj[0][1] * x1
         z1 = self.endpoints_proj[0][2] * x1
@@ -367,32 +369,42 @@ class edge:
 
         i = 0
         N = len(self.intersections) - 1
+        # Iterate over the segments
         while i < N:
-            # Midpoint of the projected interval
+            # Midpoint of the projected segment
             t = (self.intersections[i] + self.intersections[i + 1]) / 2.0
             midpoint_proj_y = self.endpoints_proj[0][1] + self.direction_proj[1] * t
             midpoint_proj_z = self.endpoints_proj[0][2] + self.direction_proj[2] * t
 
-            # Midpoint of the interval in scene coordinates
-            t2 = (midpoint_proj_y * x1 - y1) / (y2 - y1 - midpoint_proj_y * (x2 - x1))
+            # Midpoint of the segment in camera coordinates
+            # Note: The midpoint of the 3d segment is usually not the midpoint of the projected segment
+            # (The angle bisector in a triangle does not usually bisect the opposing edge in the midpoint.)
+            #t2 = (midpoint_proj_y * x1 - y1) / (y2 - y1 - midpoint_proj_y * (x2 - x1))
+            # The midpoint of the 3d segment is usually close to the midpoint of the projected segment
+            t2 = (self.intersections[i] + self.intersections[i + 1]) / 2.0
             midpoint_x = self.endpoints[0][0] + self.direction[0] * t2
             midpoint_y = self.endpoints[0][1] + self.direction[1] * t2
             midpoint_z = self.endpoints[0][2] + self.direction[2] * t2
 
             visible = 1
+            # Iterate over all polygons
             for p in polygon_list:
+                # Omit the polygon that the edge belongs to
                 if p in self.polymember:
                     continue
+                # Omit the polygons that do not cover the midpoint of the segment
                 if not p.inside(midpoint_proj_y, midpoint_proj_z, mp):
                     continue
 
-                # point is inside polygon
+                # Projected midpoint is inside the (projected) polygon
                 #t = (-p.pd - proj.cp.dot(p.nn)) / p.nn.dot(midpoint - proj.cp)
                 t3 = p.nn[0] * (midpoint_x - proj.cp[0]) + p.nn[1] * (midpoint_y - proj.cp[1]) + p.nn[2] * (midpoint_z - proj.cp[2])
                 t3 = (-p.pd - (proj.cp[0] * p.nn[0] + proj.cp[1] * p.nn[1] + proj.cp[2] * p.nn[2])) / t3
+                # Decide whether the midpoint is visible or not
                 if t3 < 1.0:
                     visible = 0
                     break
+            # Set the visibility of the segment
             self.visibility.append(visible)
             i += 1
 
