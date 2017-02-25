@@ -361,12 +361,10 @@ class edge:
         self.intersections.sort()
 
         # Get the coordinates of the endpoints in camera coordinates
-        x1 = self.endpoints_proj[0][0]
-        y1 = self.endpoints_proj[0][1] * x1
-        z1 = self.endpoints_proj[0][2] * x1
-        x2 = self.endpoints_proj[1][0]
-        y2 = self.endpoints_proj[1][1] * x2
-        z2 = self.endpoints_proj[1][2] * x2
+        #a = proj.transform_to_camera_coords(self.endpoints[0])
+        #b = proj.transform_to_camera_coords(self.endpoints[1])
+        #x1, y1, z1 = a[0], a[1], a[2]
+        #x2, y2, z2 = b[0], b[1], b[2]
 
         i = 0
         N = len(self.intersections) - 1
