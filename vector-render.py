@@ -1,6 +1,7 @@
 import bpy
 import mathutils
-from math import cos, degrees, radians
+from math import cos, degrees, radians, sqrt, acos, pi
+from random import choice
 
 # BINARY TREE -------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -75,6 +76,8 @@ class binary_tree:
 
 class metapost:
     def __init__(self, filename):
+        self.scale = 1.0
+
         self.f = open(filename, "w")
         self.f.write("beginfig(-1)\n")
         self.f.write("% Scale unit\n")
@@ -86,7 +89,19 @@ class metapost:
         self.f.write("% Face colour\n")
         self.f.write("color fc;\n")
         self.f.write("fc := 0.8 white;\n")
-        self.scale = 1.0
+
+        # Debugging grid
+        if False:
+            self.f.write("for x = -0.5 step 0.01 until 0.5: draw (x * u, -u / 2)--(x * u, u / 2) withcolor 0.95 white; endfor\n")
+            self.f.write("for x = -0.5 step 0.10 until 0.5: draw (x * u, -u / 2)--(x * u, u / 2) withcolor 0.90 white; endfor\n")
+            self.f.write("for y = -0.5 step 0.01 until 0.5: draw (-u / 2, y * u)--(u / 2, y * u) withcolor 0.95 white; endfor\n")
+            self.f.write("for y = -0.5 step 0.10 until 0.5: draw (-u / 2, y * u)--(u / 2, y * u) withcolor 0.90 white; endfor\n")
+            for x in range(-4, 5, 1):
+                self.f.write("label(btex %.1f etex, (+0.45 u, %f u));" % (x / 10, x / 10));
+                self.f.write("label(btex %.1f etex, (-0.45 u, %f u));" % (x / 10, x / 10));
+                self.f.write("label(btex %.1f etex, (%f u, +0.45 u));" % (x / 10, x / 10));
+                self.f.write("label(btex %.1f etex, (%f u, -0.45 u));" % (x / 10, x / 10));
+
     def dotdraw(self, coord):
             self.f.write("pickup pencircle scaled 2 pt;\n")
             self.f.write("drawdot (%f u, %f u);\n" % (coord[0], coord[1]))
@@ -127,7 +142,6 @@ class metapost:
             colour = "(%f, %f, %f)" % (colour[0], colour[1], colour[2])
         self.f.write("--cycle withcolor %s;\n" % (colour))
     def label(self, text, pos, ax, ay, rotation):
-        print(ax, ay)
         suffix = ""
         # Note: Align is reversed in metapost
         if ay == "BOTTOM" or ay == "TOP_BASELINE":
@@ -230,6 +244,33 @@ class bsp_node:
             p.project(proj)
             p.draw(mp)
 
+# BOUNDING BOX ------------------------------------------------------------------------------------------------------------------------------------------------
+
+class bounding_box:
+    def __init__(self, points):
+        self.xmin = None
+        self.xmax = None
+        self.ymin = None
+        self.ymax = None
+        for p in points:
+            if self.xmin == None or p[1] < self.xmin:
+                self.xmin = p[1]
+            if self.xmax == None or p[1] > self.xmax:
+                self.xmax = p[1]
+            if self.ymin == None or p[2] < self.ymin:
+                self.ymin = p[2]
+            if self.ymax == None or p[2] > self.ymax:
+                self.ymax = p[2]
+        # Epsilon
+        #self.xmin -= 0.001
+        #self.xmax += 0.001
+        #self.ymin -= 0.001
+        #self.ymax += 0.001
+    def __str__(self):
+        return "%f <= x <= %f; %f <= y <= %f" % (self.xmin, self.xmax, self.ymin, self.ymax)
+    def inside(self, point):
+        return point[1] > self.xmin and point[1] < self.xmax and point[2] > self.ymin and point[2] < self.ymax
+
 # PROJECTOR ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 class projector:
@@ -295,6 +336,7 @@ class edge:
         self.visibility = [1]
         self.colour = [0.0, 0.0, 0.0]
         self.local_edge_angle_limit_cos = None
+        self.bbox = None
 
     def __eq__(self, edge):
         res = False
@@ -319,6 +361,7 @@ class edge:
         self.endpoints_proj[0] = p.project(self.endpoints[0])
         self.endpoints_proj[1] = p.project(self.endpoints[1])
         self.direction_proj = self.endpoints_proj[1] - self.endpoints_proj[0]
+        self.bbox = bounding_box([self.endpoints_proj[0], self.endpoints_proj[1]])
 
     def add_polygon(self, poly):
         self.polymember.append(poly)
@@ -474,6 +517,7 @@ class polygon:
         # 0: front, 1: back
         self.colour = [[0.8, 0.8, 0.8], [0.8, 0.8, 0.8]]
         self.front_facing = True
+        self.bbox = None
 
     def __str__(self):
         s = ""
@@ -487,11 +531,20 @@ class polygon:
         self.centre_proj = p.project(self.centre)
         if self.nn.dot(p.cp - self.centre) < 0:
             self.front_facing = False
+        self.bbox = bounding_box(self.qp)
 
     def point_dist(self, v):
         return self.nn.dot(v) + self.pd
 
     def inside(self, proj_x, proj_y, mp):
+        # Determiness, whether the given point is within the polygon
+        # FIXME: this algorithm is not sensitive to special cases
+
+        # Check, whether the point is inside the bounding box
+        if not self.bbox.inside(mathutils.Vector((0, proj_x, proj_y))):
+            # Not inside the bounding box
+            return False
+
         # Number of intersections
         n = 0
         i = -1
@@ -512,7 +565,7 @@ class polygon:
             t1 = (proj_x - self.qp[i][1]) / t1
 
             # test for intersection within this edge
-            if t1 >= 0.0 and t1 <= 1.0:
+            if t1 >= 0.0 and t1 < 1.0:
                 #t2 = (t1 * uy - dy) / vy
                 t2 = t1 * (self.qp[ii][2] - self.qp[i][2]) - (proj_y - self.qp[i][2])
                 if t2 > 0:
@@ -777,9 +830,7 @@ class label():
         self.align_y = align_y
         self.rotation = rotation
     def project(self, p):
-        print(self.position)
         self.position_proj = p.project(self.position)
-        print(self.position_proj)
     def draw(self, m):
         m.label(self.text, self.position_proj, self.align_x, self.align_y, self.rotation)
 
