@@ -102,6 +102,10 @@ class metapost:
                 self.f.write("label(btex %.1f etex, (%f u, +0.45 u));" % (x / 10, x / 10));
                 self.f.write("label(btex %.1f etex, (%f u, -0.45 u));" % (x / 10, x / 10));
 
+    def set_canvas_size(self, xmin, xmax, ymin, ymax):
+        self.f.write("pickup pencircle scaled 0 pt;\n");
+        self.f.write("draw (%f u, %f u)--(%f u, %f u)--(%f u, %f u)--(%f u, %f u)--cycle withcolor white;\n" % (xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax))
+        self.f.write("pickup pencircle scaled 0.5 pt;\n");
     def dotdraw(self, coord):
             self.f.write("pickup pencircle scaled 2 pt;\n")
             self.f.write("drawdot (%f u, %f u);\n" % (coord[0], coord[1]))
@@ -316,6 +320,15 @@ class projector:
             return mathutils.Vector((res.length, x, y))
         else:
             return res
+
+    def get_canvas_size(self):
+        if bpy.context.scene.render.resolution_x > bpy.context.scene.render.resolution_y:
+            w = 1.0
+            h = w / bpy.context.scene.render.resolution_x * bpy.context.scene.render.resolution_y
+        else:
+            h = 1.0
+            w = h / bpy.context.scene.render.resolution_x * bpy.context.scene.render.resolution_y
+        return (-w / 2, w / 2, -h / 2, h / 2)
 
 # EDGE --------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -866,7 +879,7 @@ class VectorRender(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        scene = bpy.data.scenes["Scene"]
+        scene = context.scene
         # Operator options
         remove_plane_edges = scene.vector_render_plane_edges
         edge_angle_limit = scene.vector_render_plane_edges_angle
@@ -882,6 +895,7 @@ class VectorRender(bpy.types.Operator):
         draw_wireframe = scene.vector_render_draw_edges
         fill_polygons = scene.vector_render_draw_faces
         draw_labels = True
+        set_canvas_size = scene.vector_render_canvas_size
 
         # Get the scene
         # FIXME: use correct scene
@@ -1037,6 +1051,11 @@ class VectorRender(bpy.types.Operator):
 
 
         print("Drawing ...")
+
+        # Set canvas size
+        if set_canvas_size:
+            m.set_canvas_size(*p.get_canvas_size())
+
         # Fill polygons
         if fill_polygons:
             m.set_linewidth(0.05);
@@ -1071,6 +1090,7 @@ class VectorRenderPanel(bpy.types.Panel):
     bpy.types.Scene.vector_render_file = bpy.props.StringProperty(name = "Output", subtype="FILE_PATH")
     bpy.types.Scene.vector_render_size = bpy.props.FloatProperty(name = "Size", default = 10, soft_min = 0, min = 0.001)
     bpy.types.Scene.vector_render_size_unit = bpy.props.EnumProperty(items = [("cm", "cm", "cm"), ("mm", "mm", "mm"), ("pt", "pt", "pt")], name = "Unit")
+    bpy.types.Scene.vector_render_canvas_size = bpy.props.BoolProperty(name = "Set Canvas Size", default = False)
     bpy.types.Scene.vector_render_hidden_lines = bpy.props.EnumProperty(items = [("HIDE", "Hide", "hide"), ("SHOW", "Show", "show"), ("DASH", "Dash", "dash")], name = "Hidden lines")
     bpy.types.Scene.vector_render_plane_edges = bpy.props.BoolProperty(name = "Remove plane edges", default = True)
     bpy.types.Scene.vector_render_plane_edges_angle = bpy.props.FloatProperty(name = "Edge angle", default = 0.0, soft_min = 0, min = 0.001)
@@ -1089,6 +1109,7 @@ class VectorRenderPanel(bpy.types.Panel):
         row = col.row(align = True)
         row.prop(context.scene, "vector_render_size")
         row.prop(context.scene, "vector_render_size_unit")
+        col.prop(context.scene, "vector_render_canvas_size")
         col.separator()
 
         col.prop(context.scene, "vector_render_draw_edges")
