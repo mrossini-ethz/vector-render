@@ -270,6 +270,9 @@ class bounding_box:
         return "%f <= x <= %f; %f <= y <= %f" % (self.xmin, self.xmax, self.ymin, self.ymax)
     def inside(self, point):
         return point[1] > self.xmin and point[1] < self.xmax and point[2] > self.ymin and point[2] < self.ymax
+    def overlap(self, other):
+        # Determines whether the two bounding boxes overlap
+        return not (other.xmin > self.xmax or other.xmax < self.xmin or other.ymin > self.ymax or other.ymax < self.ymin)
 
 # PROJECTOR ---------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -361,7 +364,7 @@ class edge:
         self.endpoints_proj[0] = p.project(self.endpoints[0])
         self.endpoints_proj[1] = p.project(self.endpoints[1])
         self.direction_proj = self.endpoints_proj[1] - self.endpoints_proj[0]
-        self.bbox = bounding_box([self.endpoints_proj[0], self.endpoints_proj[1]])
+        self.bbox = bounding_box(self.endpoints_proj)
 
     def add_polygon(self, poly):
         self.polymember.append(poly)
@@ -369,9 +372,13 @@ class edge:
     def intersect(self, edgetree, skip):
         ux = self.direction_proj[1]
         uy = self.direction_proj[2]
-        for e in edgetree[skip:]:
+        for i in range(skip, len(edgetree)):
+            e = edgetree[i]
             # ignore lines with the same direction because they will never cross
             if self.direction_proj == e.direction_proj or self.direction_proj == -e.direction_proj:
+                continue
+            # If the two bounding boxes do not overlap, do not bother to check for intersection
+            if not self.bbox.overlap(e.bbox):
                 continue
 
             vx = e.direction_proj[1]
