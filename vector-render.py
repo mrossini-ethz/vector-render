@@ -882,7 +882,7 @@ class VectorRender(bpy.types.Operator):
         scene = context.scene
         # Operator options
         remove_plane_edges = scene.vector_render_plane_edges
-        edge_angle_limit = scene.vector_render_plane_edges_angle
+        edge_angle_limit = degrees(scene.vector_render_plane_edges_angle)
         hidden_line_removal = True
         draw_hidden_lines = False
         if scene.vector_render_hidden_lines == "HIDE":
@@ -1093,7 +1093,7 @@ class VectorRenderPanel(bpy.types.Panel):
     bpy.types.Scene.vector_render_canvas_size = bpy.props.BoolProperty(name = "Set Canvas Size", default = False)
     bpy.types.Scene.vector_render_hidden_lines = bpy.props.EnumProperty(items = [("HIDE", "Hide", "hide"), ("SHOW", "Show", "show"), ("DASH", "Dash", "dash")], name = "Hidden lines")
     bpy.types.Scene.vector_render_plane_edges = bpy.props.BoolProperty(name = "Remove plane edges", default = True)
-    bpy.types.Scene.vector_render_plane_edges_angle = bpy.props.FloatProperty(name = "Edge angle", default = 0.0, soft_min = 0, min = 0.001)
+    bpy.types.Scene.vector_render_plane_edges_angle = bpy.props.FloatProperty(name = "Edge angle", default = 0.0, soft_min = 0, min = 0, max = pi, soft_max = pi, subtype = "ANGLE", precision = 1, step = 100)
     bpy.types.Scene.vector_render_draw_edges = bpy.props.BoolProperty(name = "Draw edges", default = True)
     bpy.types.Scene.vector_render_draw_faces = bpy.props.BoolProperty(name = "Draw faces", default = False)
     bpy.types.Scene.vector_render_use_lights = bpy.props.BoolProperty(name = "Use lights", default = False)
