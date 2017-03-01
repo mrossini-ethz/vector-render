@@ -3,6 +3,15 @@ import mathutils
 from math import cos, degrees, radians, sqrt, acos, pi
 from random import choice
 
+# GENERIC FUNCTIONS -------------------------------------------------------------------------------------------------------------------------------------------
+
+def gamma_correction(linear_colour):
+    if linear_colour < 0.00313:
+        return linear_colour * 12.92
+    else:
+        a = 0.055
+        return (linear_colour ** (1 / 2.4)) * (1 + a) - a
+
 # BINARY TREE -------------------------------------------------------------------------------------------------------------------------------------------------
 
 class binary_tree_iter:
@@ -766,6 +775,16 @@ class polygon:
             self.colour[0][c] = gamma_correction(shader[2][c])
             self.colour[1][c] = gamma_correction(shader[2][c])
 
+    def set_colour(self, colour):
+        # Front face
+        self.colour[0][0] = gamma_correction(colour[0])
+        self.colour[0][1] = gamma_correction(colour[1])
+        self.colour[0][2] = gamma_correction(colour[2])
+        # Back face
+        self.colour[1][0] = gamma_correction(colour[0])
+        self.colour[1][1] = gamma_correction(colour[1])
+        self.colour[1][2] = gamma_correction(colour[2])
+
     def shade(self, lights, camera):
         if self.shader:
             k_ambient = self.shader[1]
@@ -938,6 +957,9 @@ class VectorRender(bpy.types.Operator):
                 poly_obj = polygon(vertices, normal)
                 polylist.append(poly_obj)
                 if fill_polygons:
+                    # If the polygon has a material, assign the diffuse colour to it. Otherwise the default color is used.
+                    if len(object.material_slots) > 0:
+                        poly_obj.set_colour(object.material_slots[poly.material_index].material.diffuse_color)
                     #try:
                     #    poly_obj.set_shader(effects[primitive.material.effect.id])
                     #except:
