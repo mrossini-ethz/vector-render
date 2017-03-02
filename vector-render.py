@@ -923,6 +923,9 @@ class VectorRender(bpy.types.Operator):
         fill_polygons = scene.vector_render_draw_faces
         draw_labels = True
         set_canvas_size = scene.vector_render_canvas_size
+        face_colour = None
+        if scene.vector_render_force_face_colour:
+            face_colour = scene.vector_render_face_colour
 
         # Get the scene
         # FIXME: use correct scene
@@ -966,8 +969,11 @@ class VectorRender(bpy.types.Operator):
                 polylist.append(poly_obj)
                 if fill_polygons:
                     # If the polygon has a material, assign the diffuse colour to it. Otherwise the default color is used.
-                    if len(object.material_slots) > 0:
-                        poly_obj.set_colour(object.material_slots[poly.material_index].material.diffuse_color)
+                    if face_colour:
+                        poly_obj.set_colour(face_colour)
+                    else:
+                        if len(object.material_slots) > 0:
+                            poly_obj.set_colour(object.material_slots[poly.material_index].material.diffuse_color)
                     #try:
                     #    poly_obj.set_shader(effects[primitive.material.effect.id])
                     #except:
@@ -1157,8 +1163,12 @@ class VectorRenderPanel(bpy.types.Panel):
 
     # Faces
     bpy.types.Scene.vector_render_draw_faces = bpy.props.BoolProperty(name = "Draw faces", default = False, update = callback_show_face_options)
+    bpy.types.Scene.vector_render_face_colour = bpy.props.FloatVectorProperty(name = "", subtype = "COLOR", default = (0.8, 0.8, 0.8),
+                                                                              min = 0, soft_min = 0, max = 1, soft_max = 1)
+    bpy.types.Scene.vector_render_force_face_colour = bpy.props.BoolProperty(name = "Force face color", default = False)
 
     def draw(self, context):
+        scene = context.scene
         layout = self.layout
 
         layout.label("Output:")
@@ -1185,6 +1195,12 @@ class VectorRenderPanel(bpy.types.Panel):
             layout.separator()
 
         layout.prop(context.scene, "vector_render_draw_faces")
+        if show_face_options:
+            row = layout.row()
+            row.prop(context.scene, "vector_render_force_face_colour")
+            rowrow = row.row()
+            rowrow.enabled = scene.vector_render_force_face_colour
+            rowrow.prop(context.scene, "vector_render_face_colour")
         layout.separator()
 
         layout.operator("render.vector_render")
