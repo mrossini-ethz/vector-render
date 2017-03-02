@@ -114,6 +114,7 @@ class metapost:
         self.f.write("% Face colour\n")
         self.f.write("color fc;\n")
         self.f.write("fc := 0.8 white;\n")
+        self.f.write("lw := 0.5;\n")
 
         # Debugging grid
         if False:
@@ -146,7 +147,7 @@ class metapost:
 
         dashed_str = ""
         if hidden:
-            dashed_str = " dashed evenly scaled dl"
+            dashed_str = " dashed evenly scaled (dl * 2 * lw)"
 
         for i in range(1, len(segs)):
             self.f.write("--(%f u, %f u)" % (segs[i][0] * self.scale, segs[i][1] * self.scale))
@@ -197,6 +198,7 @@ class metapost:
         self.f.write("label%s(%s, (0, 0)) rotated %f shifted (%f u, %f u);\n" % (suffix, text, rotation, pos[1] * self.scale, pos[2] * self.scale))
     def set_linewidth(self, val):
         self.f.write("pickup pencircle scaled %f pt;\n" % (val))
+        self.f.write("lw := %f;\n" % (val))
     def __del__(self):
         self.f.write("endfig;\nend\n")
 
@@ -1098,21 +1100,23 @@ class VectorRender(bpy.types.Operator):
 
         # Set canvas size
         if set_canvas_size:
+            m.set_linewidth(0.05);
             m.set_canvas_size(*p.get_canvas_size())
 
         # Fill polygons
         if fill_polygons:
             m.set_linewidth(0.05);
             polytree.draw(p, m)
-            m.set_linewidth(0.5);
 
         # Draw hidden lines
         if draw_wireframe and draw_hidden_lines:
+            m.set_linewidth(scene.vector_render_edge_width);
             for e in edgelist:
                 e.draw(m, hidden = True)
 
         # Draw visible lines
         if draw_wireframe:
+            m.set_linewidth(scene.vector_render_edge_width);
             for e in edgelist:
                 e.draw(m, hidden = False)
 
@@ -1142,6 +1146,7 @@ class VectorRenderPanel(bpy.types.Panel):
     # Drawing options
 
     # Edges
+    bpy.types.Scene.vector_render_edge_width = bpy.props.FloatProperty(name = "Line width", default = 0.5, min = 0, soft_min = 0)
     bpy.types.Scene.vector_render_edge_colour = bpy.props.FloatVectorProperty(name = "Edge color", subtype = "COLOR", default = (0, 0, 0),
                                                                               min = 0, soft_min = 0, max = 1, soft_max = 1)
     bpy.types.Scene.vector_render_hidden_lines = bpy.props.EnumProperty(items = [("HIDE", "Hide", "hide"),
@@ -1173,6 +1178,7 @@ class VectorRenderPanel(bpy.types.Panel):
 
         layout.prop(context.scene, "vector_render_draw_edges")
         if scene.vector_render_draw_edges:
+            layout.prop(context.scene, "vector_render_edge_width")
             layout.prop(context.scene, "vector_render_edge_colour")
             layout.label("Plane edges:")
             buttonrow = layout.row(align = True)
