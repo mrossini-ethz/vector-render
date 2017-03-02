@@ -964,14 +964,19 @@ class VectorRender(bpy.types.Operator):
             object_pos = object.location
             object_rot = object.rotation_euler
             object_scl = object.scale
+            # Apply the modifiers, if necessary
+            if scene.vector_render_apply_modifiers:
+                mesh = object.to_mesh(scene, True, "RENDER")
+            else:
+                mesh = object.data
             # Iterate over polygons
-            for poly in object.data.polygons:
+            for poly in mesh.polygons:
                 # Get the vertex indices
                 vertex_indices = poly.vertices
                 # Get the coordinates for each vertex
                 vertices = []
                 for vi in vertex_indices:
-                    vertices.append(object_transform(object.data.vertices[vi].co, object_pos, object_rot, object_scl))
+                    vertices.append(object_transform(mesh.vertices[vi].co, object_pos, object_rot, object_scl))
                 # Polygon normal
                 normal = mathutils.Vector(object_normal_transform(poly.normal, object_rot))
                 # Create polygon object
@@ -998,8 +1003,8 @@ class VectorRender(bpy.types.Operator):
                 # Iterate over the edges of the polygon
                 for eg in poly.edge_keys:
                     # Create an edge object
-                    e = edge(object_transform(object.data.vertices[eg[0]].co, object_pos, object_rot, object_scl), object_transform(object.data.vertices[eg[1]].co, object_pos, object_rot, object_scl))
-                    #object.data.vertices[eg[0]].co, object.data.vertices[eg[1]].co)
+                    e = edge(object_transform(mesh.vertices[eg[0]].co, object_pos, object_rot, object_scl), object_transform(mesh.vertices[eg[1]].co, object_pos, object_rot, object_scl))
+                    #mesh.vertices[eg[0]].co, mesh.vertices[eg[1]].co)
                     # Add the edge to the global edge list
                     added = True
                     if edgetree:
@@ -1144,6 +1149,7 @@ class VectorRenderPanel(bpy.types.Panel):
     bpy.types.Scene.vector_render_canvas_size = bpy.props.BoolProperty(name = "Force dimensions", default = False)
 
     # Drawing options
+    bpy.types.Scene.vector_render_apply_modifiers = bpy.props.BoolProperty(name = "Apply modifiers", default = True)
 
     # Edges
     bpy.types.Scene.vector_render_edge_width = bpy.props.FloatProperty(name = "Line width", default = 0.5, min = 0, soft_min = 0)
@@ -1175,6 +1181,7 @@ class VectorRenderPanel(bpy.types.Panel):
         row.prop(context.scene, "vector_render_size_unit")
         layout.prop(context.scene, "vector_render_canvas_size")
         layout.separator()
+        layout.prop(scene, "vector_render_apply_modifiers")
 
         layout.prop(context.scene, "vector_render_draw_edges")
         if scene.vector_render_draw_edges:
