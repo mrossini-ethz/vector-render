@@ -87,6 +87,8 @@ class metapost:
     def __init__(self, filename):
         self.scale = 1.0
 
+        # FIXME: scene
+        scene = bpy.data.scenes["Scene"]
         self.f = open(filename, "w")
         self.f.write("beginfig(-1)\n")
         self.f.write("% Scale unit\n")
@@ -98,11 +100,17 @@ class metapost:
             unit = "pt"
         else:
             unit = "cm"
-        self.f.write("u := %i %s;\n" % (bpy.data.scenes["Scene"].vector_render_size, unit))
+        self.f.write("u := %i %s;\n" % (scene.vector_render_size, unit))
         self.f.write("% Dash length\n")
         self.f.write("dl := 0.5;\n")
         self.f.write("% Hidden transparency\n")
         self.f.write("tr := 0.8;\n")
+        self.f.write("% Edge colour\n")
+        self.f.write("color ec;\n")
+        red = gamma_correction(scene.vector_render_edge_colour[0])
+        grn = gamma_correction(scene.vector_render_edge_colour[1])
+        blu = gamma_correction(scene.vector_render_edge_colour[2])
+        self.f.write("ec := (%f, %f, %f);\n" % (red, grn, blu))
         self.f.write("% Face colour\n")
         self.f.write("color fc;\n")
         self.f.write("fc := 0.8 white;\n")
@@ -150,7 +158,7 @@ class metapost:
             else:
                 self.f.write(dashed_str + " withcolor ((1 - tr) * %s + tr * white);\n" % (colour))
         else:
-            self.f.write(dashed_str + ";\n" )
+            self.f.write(dashed_str + " withcolor ec;\n" )
     def polyfill(self, segs, colour = None):
         if len(segs) < 2:
             return
@@ -1134,6 +1142,8 @@ class VectorRenderPanel(bpy.types.Panel):
     # Drawing options
 
     # Edges
+    bpy.types.Scene.vector_render_edge_colour = bpy.props.FloatVectorProperty(name = "Edge color", subtype = "COLOR", default = (0, 0, 0),
+                                                                              min = 0, soft_min = 0, max = 1, soft_max = 1)
     bpy.types.Scene.vector_render_hidden_lines = bpy.props.EnumProperty(items = [("HIDE", "Hide", "hide"),
                                                                                ("SHOW", "Show", "show"),
                                                                                ("DASH", "Dash", "dash")], default = "HIDE")
@@ -1163,6 +1173,7 @@ class VectorRenderPanel(bpy.types.Panel):
 
         layout.prop(context.scene, "vector_render_draw_edges")
         if scene.vector_render_draw_edges:
+            layout.prop(context.scene, "vector_render_edge_colour")
             layout.label("Plane edges:")
             buttonrow = layout.row(align = True)
             buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "HIDE")
