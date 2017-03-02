@@ -900,7 +900,7 @@ class VectorRender(bpy.types.Operator):
     def execute(self, context):
         scene = context.scene
         # Operator options
-        remove_plane_edges = scene.vector_render_plane_edges
+        remove_plane_edges = (scene.vector_render_plane_edges == "HIDE")
         edge_angle_limit = degrees(scene.vector_render_plane_edges_angle)
         hidden_line_removal = True
         draw_hidden_lines = False
@@ -1101,6 +1101,24 @@ class VectorRender(bpy.types.Operator):
 
         return {'FINISHED'}
 
+show_edge_options = True
+
+def callback_show_edge_options(self, context):
+    global show_edge_options
+    show_edge_options = self.vector_render_draw_edges
+
+show_face_options = False
+
+def callback_show_face_options(self, context):
+    global show_face_options
+    show_face_options = self.vector_render_draw_faces
+
+show_plane_edge_options = True
+
+def callback_show_plane_edge_options(self, context):
+    global show_plane_edge_options
+    show_plane_edge_options = (self.vector_render_plane_edges == "HIDE")
+
 class VectorRenderPanel(bpy.types.Panel):
     """Creates a Panel in the Object properties window"""
     bl_label = "Vector Render"
@@ -1109,43 +1127,57 @@ class VectorRenderPanel(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_context = "render"
 
-    bpy.types.Scene.vector_render_file = bpy.props.StringProperty(name = "Output", subtype="FILE_PATH")
+    # Output (file) options
+    bpy.types.Scene.vector_render_file = bpy.props.StringProperty(name = "", subtype="FILE_PATH")
     bpy.types.Scene.vector_render_size = bpy.props.FloatProperty(name = "Size", default = 10, soft_min = 0, min = 0.001)
     bpy.types.Scene.vector_render_size_unit = bpy.props.EnumProperty(items = [("cm", "cm", "cm"), ("mm", "mm", "mm"), ("pt", "pt", "pt")], name = "Unit")
-    bpy.types.Scene.vector_render_canvas_size = bpy.props.BoolProperty(name = "Set Canvas Size", default = False)
-    bpy.types.Scene.vector_render_hidden_lines = bpy.props.EnumProperty(items = [("HIDE", "Hide", "hide"), ("SHOW", "Show", "show"), ("DASH", "Dash", "dash")], name = "Hidden lines")
-    bpy.types.Scene.vector_render_plane_edges = bpy.props.BoolProperty(name = "Remove plane edges", default = True)
-    bpy.types.Scene.vector_render_plane_edges_angle = bpy.props.FloatProperty(name = "Edge angle", default = 0.0, soft_min = 0, min = 0, max = pi, soft_max = pi, subtype = "ANGLE", precision = 1, step = 100)
-    bpy.types.Scene.vector_render_draw_edges = bpy.props.BoolProperty(name = "Draw edges", default = True)
-    bpy.types.Scene.vector_render_draw_faces = bpy.props.BoolProperty(name = "Draw faces", default = False)
-    bpy.types.Scene.vector_render_use_lights = bpy.props.BoolProperty(name = "Use lights", default = False)
-    bpy.types.Scene.vector_render_color_lines = bpy.props.BoolProperty(name = "Color lines", default = False)
+    bpy.types.Scene.vector_render_canvas_size = bpy.props.BoolProperty(name = "Force dimensions", default = False)
 
+    # Drawing options
+
+    # Edges
+    bpy.types.Scene.vector_render_hidden_lines = bpy.props.EnumProperty(items = [("HIDE", "Hide", "hide"),
+                                                                               ("SHOW", "Show", "show"),
+                                                                               ("DASH", "Dash", "dash")], default = "HIDE")
+    bpy.types.Scene.vector_render_plane_edges = bpy.props.EnumProperty(items = [("SHOW", "Show", "show"), ("HIDE", "Hide", "hide")],
+                                                                                default = "HIDE", update = callback_show_plane_edge_options)
+    bpy.types.Scene.vector_render_plane_edges_angle = bpy.props.FloatProperty(name = "Angle limit", default = 0.0, soft_min = 0, min = 0, max = pi,
+                                                                              soft_max = pi, subtype = "ANGLE", precision = 1, step = 100)
+    bpy.types.Scene.vector_render_draw_edges = bpy.props.BoolProperty(name = "Draw edges", default = True, update = callback_show_edge_options)
+
+    # Faces
+    bpy.types.Scene.vector_render_draw_faces = bpy.props.BoolProperty(name = "Draw faces", default = False, update = callback_show_face_options)
 
     def draw(self, context):
         layout = self.layout
-        col = layout.column()
-        col.prop(context.scene, "vector_render_file")
-        col.separator()
 
-        row = col.row(align = True)
+        layout.label("Output:")
+        layout.prop(context.scene, "vector_render_file")
+        row = layout.row(align = True)
         row.prop(context.scene, "vector_render_size")
         row.prop(context.scene, "vector_render_size_unit")
-        col.prop(context.scene, "vector_render_canvas_size")
-        col.separator()
+        layout.prop(context.scene, "vector_render_canvas_size")
+        layout.separator()
 
-        col.prop(context.scene, "vector_render_draw_edges")
-        col.prop(context.scene, "vector_render_hidden_lines")
-        col.prop(context.scene, "vector_render_plane_edges")
-        col.prop(context.scene, "vector_render_plane_edges_angle")
-        col.prop(context.scene, "vector_render_color_lines")
-        col.separator()
+        layout.prop(context.scene, "vector_render_draw_edges")
+        if show_edge_options:
+            layout.label("Plane edges:")
+            buttonrow = layout.row(align = True)
+            buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "HIDE")
+            buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "SHOW")
+            if show_plane_edge_options:
+                layout.prop(context.scene, "vector_render_plane_edges_angle")
+            layout.label("Obscured edges:")
+            buttonrow = layout.row(align = True)
+            buttonrow.prop_enum(context.scene, "vector_render_hidden_lines", "HIDE")
+            buttonrow.prop_enum(context.scene, "vector_render_hidden_lines", "DASH")
+            buttonrow.prop_enum(context.scene, "vector_render_hidden_lines", "SHOW")
+            layout.separator()
 
-        col.prop(context.scene, "vector_render_draw_faces")
-        col.prop(context.scene, "vector_render_use_lights")
-        col.separator()
+        layout.prop(context.scene, "vector_render_draw_faces")
+        layout.separator()
 
-        col.operator("render.vector_render")
+        layout.operator("render.vector_render")
 
 def register():
     bpy.utils.register_class(VectorRender)
