@@ -1115,24 +1115,6 @@ class VectorRender(bpy.types.Operator):
 
         return {'FINISHED'}
 
-show_edge_options = True
-
-def callback_show_edge_options(self, context):
-    global show_edge_options
-    show_edge_options = self.vector_render_draw_edges
-
-show_face_options = False
-
-def callback_show_face_options(self, context):
-    global show_face_options
-    show_face_options = self.vector_render_draw_faces
-
-show_plane_edge_options = True
-
-def callback_show_plane_edge_options(self, context):
-    global show_plane_edge_options
-    show_plane_edge_options = (self.vector_render_plane_edges == "HIDE")
-
 class VectorRenderPanel(bpy.types.Panel):
     """Creates a Panel in the Object properties window"""
     bl_label = "Vector Render"
@@ -1156,13 +1138,13 @@ class VectorRenderPanel(bpy.types.Panel):
                                                                                ("SHOW", "Show", "show"),
                                                                                ("DASH", "Dash", "dash")], default = "HIDE")
     bpy.types.Scene.vector_render_plane_edges = bpy.props.EnumProperty(items = [("SHOW", "Show", "show"), ("HIDE", "Hide", "hide")],
-                                                                                default = "HIDE", update = callback_show_plane_edge_options)
+                                                                                default = "HIDE")
     bpy.types.Scene.vector_render_plane_edges_angle = bpy.props.FloatProperty(name = "Angle limit", default = 0.0, soft_min = 0, min = 0, max = pi,
                                                                               soft_max = pi, subtype = "ANGLE", precision = 1, step = 100)
-    bpy.types.Scene.vector_render_draw_edges = bpy.props.BoolProperty(name = "Draw edges", default = True, update = callback_show_edge_options)
+    bpy.types.Scene.vector_render_draw_edges = bpy.props.BoolProperty(name = "Draw edges", default = True)
 
     # Faces
-    bpy.types.Scene.vector_render_draw_faces = bpy.props.BoolProperty(name = "Draw faces", default = False, update = callback_show_face_options)
+    bpy.types.Scene.vector_render_draw_faces = bpy.props.BoolProperty(name = "Draw faces", default = False)
     bpy.types.Scene.vector_render_face_colour = bpy.props.FloatVectorProperty(name = "", subtype = "COLOR", default = (0.8, 0.8, 0.8),
                                                                               min = 0, soft_min = 0, max = 1, soft_max = 1)
     bpy.types.Scene.vector_render_force_face_colour = bpy.props.BoolProperty(name = "Force face color", default = False)
@@ -1180,12 +1162,12 @@ class VectorRenderPanel(bpy.types.Panel):
         layout.separator()
 
         layout.prop(context.scene, "vector_render_draw_edges")
-        if show_edge_options:
+        if scene.vector_render_draw_edges:
             layout.label("Plane edges:")
             buttonrow = layout.row(align = True)
             buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "HIDE")
             buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "SHOW")
-            if show_plane_edge_options:
+            if scene.vector_render_plane_edges == "HIDE":
                 layout.prop(context.scene, "vector_render_plane_edges_angle")
             layout.label("Obscured edges:")
             buttonrow = layout.row(align = True)
@@ -1195,7 +1177,7 @@ class VectorRenderPanel(bpy.types.Panel):
             layout.separator()
 
         layout.prop(context.scene, "vector_render_draw_faces")
-        if show_face_options:
+        if scene.vector_render_draw_faces:
             row = layout.row()
             row.prop(context.scene, "vector_render_force_face_colour")
             rowrow = row.row()
