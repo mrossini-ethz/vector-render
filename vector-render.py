@@ -90,7 +90,15 @@ class metapost:
         self.f = open(filename, "w")
         self.f.write("beginfig(-1)\n")
         self.f.write("% Scale unit\n")
-        self.f.write("u := %i cm;\n" % (bpy.data.scenes["Scene"].vector_render_size))
+        if bpy.data.scenes["Scene"].vector_render_size_unit == "CM":
+            unit = "cm"
+        elif bpy.data.scenes["Scene"].vector_render_size_unit == "MM":
+            unit = "mm"
+        elif bpy.data.scenes["Scene"].vector_render_size_unit == "PT":
+            unit = "pt"
+        else:
+            unit = "cm"
+        self.f.write("u := %i %s;\n" % (bpy.data.scenes["Scene"].vector_render_size, unit))
         self.f.write("% Dash length\n")
         self.f.write("dl := 0.5;\n")
         self.f.write("% Hidden transparency\n")
@@ -1130,7 +1138,9 @@ class VectorRenderPanel(bpy.types.Panel):
     # Output (file) options
     bpy.types.Scene.vector_render_file = bpy.props.StringProperty(name = "", subtype="FILE_PATH")
     bpy.types.Scene.vector_render_size = bpy.props.FloatProperty(name = "Size", default = 10, soft_min = 0, min = 0.001)
-    bpy.types.Scene.vector_render_size_unit = bpy.props.EnumProperty(items = [("cm", "cm", "cm"), ("mm", "mm", "mm"), ("pt", "pt", "pt")], name = "Unit")
+    bpy.types.Scene.vector_render_size_unit = bpy.props.EnumProperty(items = [("CM", "cm", "Unit of the render size (centimeters)"),
+                                                                              ("MM", "mm", "Unit of the render size (millimeters)"),
+                                                                              ("PT", "pt", "Unit of the render size (PostScript points)")], name = "Unit")
     bpy.types.Scene.vector_render_canvas_size = bpy.props.BoolProperty(name = "Force dimensions", default = False)
 
     # Drawing options
