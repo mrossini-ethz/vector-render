@@ -1206,12 +1206,10 @@ class VectorRender(bpy.types.Operator):
                 edgelist_len -= 1
 
         filename = scene.vector_render_file
-        if len(filename) > 2 and filename[-3:] == ".mp":
+        if scene.vector_render_output_format == "MPOST":
             m = mpost_engine(filename)
-        elif len(filename) > 3 and filename[-4:] == ".svg":
+        elif scene.vector_render_output_format == "SVG":
             m = svg_engine(filename)
-        else:
-            m = mpost_engine(filename)
 
         if hidden_line_removal:
             # Determine the edge intersection points
@@ -1271,6 +1269,8 @@ class VectorRenderPanel(bpy.types.Panel):
     bpy.types.Scene.vector_render_size_unit = bpy.props.EnumProperty(items = [("CM", "cm", "Unit of the render size (centimeters)"),
                                                                               ("MM", "mm", "Unit of the render size (millimeters)"),
                                                                               ("PT", "pt", "Unit of the render size (PostScript points)")], name = "Unit")
+    bpy.types.Scene.vector_render_output_format = bpy.props.EnumProperty(items = [("SVG", "SVG", "Scalable Vector Graphics"),
+                                                                              ("MPOST", "Metapost", "Metapost")], default = "SVG")
     bpy.types.Scene.vector_render_canvas_size = bpy.props.BoolProperty(name = "Force dimensions", default = False)
 
     # Drawing options
@@ -1299,12 +1299,17 @@ class VectorRenderPanel(bpy.types.Panel):
         scene = context.scene
         layout = self.layout
 
-        layout.label("Output:")
+        layout.label("File:")
         layout.prop(context.scene, "vector_render_file")
-        row = layout.row(align = True)
-        row.prop(context.scene, "vector_render_size")
-        row.prop(context.scene, "vector_render_size_unit")
-        layout.prop(context.scene, "vector_render_canvas_size")
+        layout.label("Format:")
+        buttonrow = layout.row(align = True)
+        buttonrow.prop_enum(context.scene, "vector_render_output_format", "SVG")
+        buttonrow.prop_enum(context.scene, "vector_render_output_format", "MPOST")
+        if scene.vector_render_output_format == "MPOST":
+            row = layout.row(align = True)
+            row.prop(context.scene, "vector_render_size")
+            row.prop(context.scene, "vector_render_size_unit")
+            layout.prop(context.scene, "vector_render_canvas_size")
         layout.separator()
         layout.prop(scene, "vector_render_apply_modifiers")
 
