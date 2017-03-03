@@ -83,7 +83,7 @@ class binary_tree:
 
 # METAPOST CLASS ----------------------------------------------------------------------------------------------------------------------------------------------
 
-class metapost:
+class mpost_engine:
     def __init__(self, filename):
         self.scale = 1.0
 
@@ -199,8 +199,92 @@ class metapost:
     def set_linewidth(self, val):
         self.f.write("pickup pencircle scaled %f pt;\n" % (val))
         self.f.write("lw := %f;\n" % (val))
+    def set_small_linewidth(self):
+        self.set_linewidth(0.05)
     def __del__(self):
         self.f.write("endfig;\nend\n")
+
+# SVG ENGINE CLASS --------------------------------------------------------------------------------------------------------------------------------------------
+
+class svg_engine:
+    def __init__(self, filename):
+        self.f = open(filename, "w")
+
+        # FIXME
+        scene = bpy.context.scene
+
+        # Render dimensions
+        self.width = scene.render.resolution_x
+        self.height = scene.render.resolution_y
+        self.scale = max(self.width, self.height)
+
+        # Header
+        self.f.write('<svg version="1.1" baseProfile="full" width="%i" height="%i" xmlns="http://www.w3.org/2000/svg">\n' % (self.width, self.height))
+        self.f.write('  <g stroke-linejoin="round" stroke-linecap="round">\n')
+
+        self.linecolour = [gamma_correction(scene.vector_render_edge_colour[0]),
+                           gamma_correction(scene.vector_render_edge_colour[1]),
+                           gamma_correction(scene.vector_render_edge_colour[2])]
+
+    def recalc(self, point):
+        return (0.5 * self.width + point[0] * self.scale, 0.5 * self.height - point[1] * self.scale)
+    def set_canvas_size(self, xmin, xmax, ymin, ymax):
+        # Nothing to do here
+        pass
+    def dotdraw(self, coord):
+        # FIXME
+        pass
+    def polydraw(self, segs, colour = None, hidden = False):
+        if len(segs) < 2:
+            return
+
+        # Copy the colour list
+        colour = list(colour)
+        if hidden:
+            colour[0] = 0.2 * colour[0] + 0.8
+            colour[1] = 0.2 * colour[1] + 0.8
+            colour[2] = 0.2 * colour[2] + 0.8
+        if colour and colour[0] == 0.0 and colour[1] == 0.0 and colour[2] == 0.0:
+            colour_str = "black"
+        else:
+            colour_str = "rgb(%i,%i,%i)" % (colour[0] * 255, colour[1] * 255, colour[2] * 255)
+        #colour_str = choice(["black", "red", "green", "blue", "aqua", "blueviolet", "darkgreen", "deeppink"])
+
+        if hidden:
+            dashed_str = ' stroke-dasharray="5,5"'
+        else:
+            dashed_str = ''
+
+        self.f.write('    <polyline points="%f %f' % self.recalc(segs[0]))
+
+        for i in range(1, len(segs)):
+            self.f.write(", %f %f" % self.recalc(segs[i]))
+
+        self.f.write('"' + dashed_str + ' stroke="%s" fill="transparent" stroke-width="%f"/>\n' % (colour_str, self.linewidth))
+    def polyfill(self, segs, colour = None):
+        if len(segs) < 2:
+            return
+        self.f.write('    <polygon points="%f %f,' % self.recalc(segs[0]))
+        for i in range(1, len(segs)):
+            self.f.write(" %f %f," % self.recalc(segs[i]))
+        if not colour:
+            colour_str = "black"
+        else:
+            colour_str = "rgb(%i,%i,%i)" % (colour[0] * 255, colour[1] * 255, colour[2] * 255)
+        self.f.write('" fill="%s"/>\n' % (colour_str))
+    def label(self, text, pos, ax, ay, rotation):
+        # FIXME: align
+        px, py = self.recalc(pos[1:])
+        self.f.write('    <text x="%f" y="%f">%s</text>\n' % (px, py, text))
+        pass
+    def set_linewidth(self, val):
+        self.linewidth = val
+    def set_small_linewidth(self):
+        self.set_linewidth(1)
+    def __del__(self):
+        self.f.write("  </g>\n")
+        self.f.write("</svg>\n")
+        self.f.close()
 
 # BSP TREE ----------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1085,7 +1169,13 @@ class VectorRender(bpy.types.Operator):
                 edgelist.pop(i)
                 edgelist_len -= 1
 
-        m = metapost(scene.vector_render_file)
+        filename = scene.vector_render_file
+        if len(filename) > 2 and filename[-3:] == ".mp":
+            m = mpost_engine(filename)
+        elif len(filename) > 3 and filename[-4:] == ".svg":
+            m = svg_engine(filename)
+        else:
+            m = mpost_engine(filename)
 
         if hidden_line_removal:
             # Determine the edge intersection points
@@ -1100,17 +1190,16 @@ class VectorRender(bpy.types.Operator):
             for e in edgelist:
                 e.check_visibility(polylist, p, m)
 
-
         print("Drawing ...")
 
         # Set canvas size
         if set_canvas_size:
-            m.set_linewidth(0.05);
+            m.set_small_linewidth();
             m.set_canvas_size(*p.get_canvas_size())
 
         # Fill polygons
         if fill_polygons:
-            m.set_linewidth(0.05);
+            m.set_small_linewidth();
             polytree.draw(p, m)
 
         # Draw hidden lines
