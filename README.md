@@ -16,3 +16,12 @@ The add-on has the following features:
   - shown normally
 - Hiding of edges within planes (using an angle limit)
 - Drawing of mesh faces (coloured by material as an option)
+
+## Installation
+1. Download the latest [release](https://github.com/mrossini-ethz/vector-render/releases) or clone the repository into a directory of your convenience.
+2. If you downloaded the zip file, extract it.
+3. Open Blender.
+4. Go to File -> User Preferences -> Addons.
+5. At the bottom of the window, chose *Install From File*.
+6. Select the file `vector-render.py` from the directory into which you cloned/extracted the repository.
+7. Activate the checkbox for the plugin that you will now find in the list.
