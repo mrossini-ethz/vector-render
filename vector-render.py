@@ -443,7 +443,7 @@ class projector:
         # Calculate the scale factor
         if self.mode == "PERSP":
             self.scale = camera.data.lens / camera.data.sensor_width
-        else:
+        elif self.mode == "ORTHO":
             self.scale = 1.0 / camera.data.ortho_scale
 
     def transform_to_camera_coords(self, vec):
@@ -455,7 +455,7 @@ class projector:
         # Perform the projection (z, x, -y)
         if self.mode == "PERSP":
             # Perspective mode
-            d = res[2] * self.scale
+            d = res[2]
             x = res[0] * self.scale / abs(d)
             y = res[1] * self.scale / abs(d)
             return mathutils.Vector((res.length, x, y))
