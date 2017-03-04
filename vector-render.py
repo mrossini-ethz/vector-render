@@ -1075,7 +1075,7 @@ class VectorRender(bpy.types.Operator):
         #boundgeoms = list(mesh.scene.objects('geometry'))
         for object in scene.objects:
             # Filter non-mesh objects
-            if not object.type == "MESH":
+            if not object.type == "MESH" and not object.type == "CURVE":
                 continue
             # Filter hidden objects
             if object.hide_render or not object.is_visible(scene):
@@ -1087,6 +1087,8 @@ class VectorRender(bpy.types.Operator):
             # Apply the modifiers, if necessary
             if scene.vector_render_apply_modifiers:
                 mesh = object.to_mesh(scene, True, "RENDER")
+            elif object.type == "CURVE":
+                mesh = object.to_mesh(scene, False, "RENDER")
             else:
                 mesh = object.data
             # Iterate over polygons
