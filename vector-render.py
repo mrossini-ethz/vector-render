@@ -276,12 +276,6 @@ class svg_engine:
         if len(segs) < 2:
             return
 
-        # Copy the colour list
-        colour = list(colour)
-        if hidden:
-            colour[0] = 0.2 * colour[0] + 0.8
-            colour[1] = 0.2 * colour[1] + 0.8
-            colour[2] = 0.2 * colour[2] + 0.8
         if colour and colour[0] == 0.0 and colour[1] == 0.0 and colour[2] == 0.0:
             colour_str = "black"
         else:
@@ -290,15 +284,17 @@ class svg_engine:
 
         if hidden:
             dashed_str = ' stroke-dasharray="%f,%f"' % (self.linewidth * 3, self.linewidth * 4)
+            opacity_str = ' stroke-opacity="0.2"'
         else:
             dashed_str = ''
+            opacity_str = ''
 
         self.f.write('    <polyline points="%f %f' % self.recalc(segs[0]))
 
         for i in range(1, len(segs)):
             self.f.write(", %f %f" % self.recalc(segs[i]))
 
-        self.f.write('"' + dashed_str + ' stroke="%s" fill="transparent" stroke-width="%f"/>\n' % (colour_str, self.linewidth))
+        self.f.write('"' + dashed_str + opacity_str + ' stroke="%s" fill="transparent" stroke-width="%f"/>\n' % (colour_str, self.linewidth))
     def polyfill(self, segs, colour = None):
         if len(segs) < 2:
             return
