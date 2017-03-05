@@ -254,6 +254,8 @@ class svg_engine:
         self.height = scene.render.resolution_y
         self.scale = max(self.width, self.height)
 
+        self.linewidth = 1.5
+
         # Header
         self.f.write('<svg version="1.1" baseProfile="full" width="%i" height="%i" xmlns="http://www.w3.org/2000/svg">\n' % (self.width, self.height))
         self.f.write('  <g stroke-linejoin="round" stroke-linecap="round">\n')
@@ -287,7 +289,7 @@ class svg_engine:
         #colour_str = choice(["black", "red", "green", "blue", "aqua", "blueviolet", "darkgreen", "deeppink"])
 
         if hidden:
-            dashed_str = ' stroke-dasharray="5,5"'
+            dashed_str = ' stroke-dasharray="%f,%f"' % (self.linewidth * 3, self.linewidth * 4)
         else:
             dashed_str = ''
 
