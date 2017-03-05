@@ -1125,8 +1125,8 @@ class VectorRender(bpy.types.Operator):
                 # Iterate over the edges of the polygon
                 for eg in poly.edge_keys:
                     # Create an edge object
-                    e = edge(object_transform(mesh.vertices[eg[0]].co, object_pos, object_rot, object_scl), object_transform(mesh.vertices[eg[1]].co, object_pos, object_rot, object_scl))
-                    #mesh.vertices[eg[0]].co, mesh.vertices[eg[1]].co)
+                    e = edge(object_transform(mesh.vertices[eg[0]].co, object_pos, object_rot, object_scl),
+                             object_transform(mesh.vertices[eg[1]].co, object_pos, object_rot, object_scl))
                     # Add the edge to the global edge list
                     added = True
                     if edgetree:
@@ -1138,6 +1138,16 @@ class VectorRender(bpy.types.Operator):
                         e.add_polygon(poly_obj)
                     else:
                         edgetree.get_identical(e).add_polygon(poly_obj)
+            # Iterate over the edges of the mesh (to catch edges that are not part of any polygon)
+            for eg in mesh.edges:
+                e = edge(object_transform(mesh.vertices[eg.key[0]].co, object_pos, object_rot, object_scl),
+                         object_transform(mesh.vertices[eg.key[1]].co, object_pos, object_rot, object_scl))
+                # Add the edge to the global edge list
+                if edgetree:
+                    # Duplicate edges will not be added
+                    edgetree.add(e)
+                else:
+                    edgetree = binary_tree(e)
 
         # Get the text data from all visible text objects in the scene
         print("Reading labels ...")
