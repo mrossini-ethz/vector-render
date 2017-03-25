@@ -213,21 +213,21 @@ class mpost_engine:
         if ay == "BOTTOM" or ay == "TOP_BASELINE":
             if ax == "RIGHT":
                 suffix = ".ulft"
-            elif ax == "CENTER" or "JUSTIFY" or "FLUSH":
+            elif ax == "CENTER" or ax == "JUSTIFY" or ax == "FLUSH":
                 suffix = ".top"
             elif ax == "LEFT":
                 suffix = ".urt"
         elif ay == "CENTER":
             if ax == "RIGHT":
                 suffix = ".lft"
-            elif ax == "CENTER" or "JUSTIFY" or "FLUSH":
+            elif ax == "CENTER" or ax == "JUSTIFY" or ax == "FLUSH":
                 suffix = ""
             elif ax == "LEFT":
                 suffix = ".rt"
         elif ay == "TOP":
             if ax == "RIGHT":
                 suffix = ".llft"
-            elif ax == "CENTER" or "JUSTIFY" or "FLUSH":
+            elif ax == "CENTER" or ax == "JUSTIFY" or ax == "FLUSH":
                 suffix = ".bot"
             elif ax == "LEFT":
                 suffix = ".lrt"
