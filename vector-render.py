@@ -105,7 +105,7 @@ class binary_tree:
             else:
                 self.next = binary_tree(obj, self)
                 return True
-            return False
+        return False
 
     def get_identical(self, obj):
         if obj > self.obj:
@@ -478,7 +478,7 @@ class projector:
 # EDGE --------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class edge:
-    def __init__(self, vertex1, vertex2):
+    def __init__(self, vertex1, vertex2, no_angle_limit = False):
         self.endpoints = None
         for i in range(3):
             if vertex1[i] < vertex2[i]:
@@ -497,6 +497,7 @@ class edge:
         self.visibility = [1]
         self.colour = [0.0, 0.0, 0.0]
         self.local_edge_angle_limit_cos = None
+        self.no_angle_limit = no_angle_limit
         self.bbox = None
 
     def __eq__(self, edge):
@@ -1139,11 +1140,14 @@ class VectorRender(bpy.types.Operator):
             # Iterate over the edges of the mesh (to catch edges that are not part of any polygon)
             for eg in mesh.edges:
                 e = edge(object_transform(mesh.vertices[eg.key[0]].co, object_pos, object_rot, object_scl),
-                         object_transform(mesh.vertices[eg.key[1]].co, object_pos, object_rot, object_scl))
+                         object_transform(mesh.vertices[eg.key[1]].co, object_pos, object_rot, object_scl),
+                         eg.crease > 0)
                 # Add the edge to the global edge list
                 if edgetree:
                     # Duplicate edges will not be added
-                    edgetree.add(e)
+                    ret = edgetree.add(e)
+                    if not ret and eg.crease > 0:
+                        edgetree.get_identical(e).no_angle_limit = True
                 else:
                     edgetree = binary_tree(e)
 
@@ -1197,7 +1201,7 @@ class VectorRender(bpy.types.Operator):
                 eg = edgelist[i]
                 normal = None
                 N = len(eg.polymember)
-                if N == 2:
+                if N == 2 and not eg.no_angle_limit:
                     angle_cos = eg.polymember[0].nn.dot(eg.polymember[1].nn)
                     if eg.local_edge_angle_limit_cos != None:
                         limit = eg.local_edge_angle_limit_cos
