@@ -908,9 +908,9 @@ class polygon:
             return
 
         self.shader = shader
-        for c in range(3):
-            self.colour[0][c] = gamma_correction(shader[2][c])
-            self.colour[1][c] = gamma_correction(shader[2][c])
+        #for c in range(3):
+        #    self.colour[0][c] = gamma_correction(shader[2][c])
+        #    self.colour[1][c] = gamma_correction(shader[2][c])
 
     def set_colour(self, colour):
         # Front face
@@ -924,11 +924,13 @@ class polygon:
 
     def shade(self, lights, camera):
         if self.shader:
-            k_ambient = self.shader[1]
-            k_diffuse = self.shader[2]
-            k_specular = self.shader[3]
+            #k_ambient = self.shader.ambient
+            k_ambient = [0.0] * 3
+            k_diffuse = self.shader.diffuse_color
+            #k_specular = self.shader.specular_color
+            k_specular = [0.0] * 3
             # Divide value by 5 to match it with blender's behaviour
-            alpha = self.shader[4] / 5.0
+            alpha = self.shader.alpha / 5.0
         else:
             k_ambient = [0.0] * 3
             k_diffuse = [0.8] * 3
@@ -941,31 +943,33 @@ class polygon:
         I = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
         # Iterate over lights
         for l in lights:
+            direction = object_transform([0,0,-1], mathutils.Vector((0,0,0)), l.rotation_euler, [1, 1, 1])
+            lo = l.data
             # Iterate over RGB colors
             for c in range(3):
                 # Ambient light, front and back face
-                I[0][c] += k_ambient[c] * l.colour[c]
-                I[1][c] += k_ambient[c] * l.colour[c]
+                #I[0][c] += k_ambient * lo.color[c]
+                #I[1][c] += k_ambient * lo.color[c]
 
                 # Phong shading model
                 # diffuse
-                diffuse = -k_diffuse[c] * l.direction.dot(self.nn)
+                diffuse = -k_diffuse[c] * direction.dot(self.nn)
                 if diffuse > 0:
-                    I[0][c] += +diffuse * l.colour[c]
+                    I[0][c] += +diffuse * lo.color[c]
                 elif diffuse < 0:
-                    I[1][c] += -diffuse * l.colour[c]
+                    I[1][c] += -diffuse * lo.color[c]
 
                 # specular
-                R = self.nn * -2.0 * l.direction.dot(self.nn) + l.direction
-                s = R.dot(V)
-                if s > 0:
-                    specular = k_specular[c] * (s ** alpha) * l.colour[c]
-                    if specular > 0:
-                        I[0][c] += specular
-                else:
-                    specular = k_specular[c] * ((-s) ** alpha) * l.colour[c]
-                    if specular > 0:
-                        I[1][c] += specular
+                #R = self.nn * -2.0 * direction.dot(self.nn) + direction
+                #s = R.dot(V)
+                #if s > 0:
+                #    specular = k_specular[c] * (s ** alpha) * lo.color[c]
+                #    if specular > 0:
+                #        I[0][c] += specular
+                #else:
+                #    specular = k_specular[c] * ((-s) ** alpha) * lo.color[c]
+                #    if specular > 0:
+                #        I[1][c] += specular
 
         # Front and back
         for i in range(2):
@@ -1055,12 +1059,15 @@ class VectorRender(bpy.types.Operator):
         face_colour = None
         if scene.vector_render_force_face_colour:
             face_colour = scene.vector_render_face_colour
+        use_lights = scene.vector_render_use_lights
 
         # Get the scene
         # FIXME: use correct scene
         scene = bpy.data.scenes["Scene"]
         # Get the camera
         camera = scene.camera
+        # Get the lights
+        lights = [o for o in scene.objects if o.type == 'LAMP']
 
         # Prepare lists and trees for polygons and edges
         polylist = []
@@ -1110,12 +1117,12 @@ class VectorRender(bpy.types.Operator):
                     else:
                         if len(object.material_slots) > 0:
                             poly_obj.set_colour(object.material_slots[poly.material_index].material.diffuse_color)
-                    #try:
-                    #    poly_obj.set_shader(effects[primitive.material.effect.id])
-                    #except:
-                    #    pass
-                    #if use_lights and len(lights) > 0:
-                    #    poly_obj.shade(lights, cp)
+                    try:
+                        poly_obj.set_shader(object.material_slots[poly.material_index].material)
+                    except:
+                        pass
+                    if use_lights and len(lights) > 0:
+                        poly_obj.shade(lights, camera.location)
                     if polytree:
                         polytree.insert_poly(poly_obj)
                     else:
@@ -1305,6 +1312,7 @@ class VectorRenderPanel(bpy.types.Panel):
 
     # Faces
     bpy.types.Scene.vector_render_draw_faces = bpy.props.BoolProperty(name = "Draw faces", default = False)
+    bpy.types.Scene.vector_render_use_lights = bpy.props.BoolProperty(name = "Use lights", default = False)
     bpy.types.Scene.vector_render_face_colour = bpy.props.FloatVectorProperty(name = "", subtype = "COLOR", default = (0.8, 0.8, 0.8),
                                                                               min = 0, soft_min = 0, max = 1, soft_max = 1)
     bpy.types.Scene.vector_render_force_face_colour = bpy.props.BoolProperty(name = "Force face color", default = False)
@@ -1348,6 +1356,7 @@ class VectorRenderPanel(bpy.types.Panel):
         facebox = layout.box()
         facebox.prop(context.scene, "vector_render_draw_faces")
         if scene.vector_render_draw_faces:
+            facebox.prop(context.scene, "vector_render_use_lights")
             row = facebox.row()
             row.prop(context.scene, "vector_render_force_face_colour")
             rowrow = row.row()
