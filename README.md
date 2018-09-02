@@ -16,6 +16,15 @@ The add-on has the following features:
   - shown normally
 - Hiding of edges within planes (using an angle limit)
 - Drawing of mesh faces (coloured by material as an option)
+- Shading using lamps (currently limited to sun lamps).
+
+## Limitations
+There are several limitations to the add-on which are mostly due to the nature of vector graphics:
+
+- No smooth shading
+- Shading works only with sun lamps (as of now)
+- Intersecting polygons/objects won't work properly
+- No cast shadows.
 
 ## Installation
 1. Download the latest [release](https://github.com/mrossini-ethz/vector-render/releases) or clone the repository into a directory of your convenience.
