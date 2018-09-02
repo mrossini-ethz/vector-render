@@ -1313,46 +1313,48 @@ class VectorRenderPanel(bpy.types.Panel):
         scene = context.scene
         layout = self.layout
 
-        layout.label("File:")
-        layout.prop(context.scene, "vector_render_file")
-        layout.label("Format:")
-        buttonrow = layout.row(align = True)
+        filebox = layout.box()
+        filebox.label("File:")
+        filebox.prop(context.scene, "vector_render_file")
+        filebox.label("Format:")
+        buttonrow = filebox.row(align = True)
         buttonrow.prop_enum(context.scene, "vector_render_output_format", "SVG")
         buttonrow.prop_enum(context.scene, "vector_render_output_format", "MPOST")
         if scene.vector_render_output_format == "MPOST":
-            row = layout.row(align = True)
+            row = filebox.row(align = True)
             row.prop(context.scene, "vector_render_size")
             row.prop(context.scene, "vector_render_size_unit")
             layout.prop(context.scene, "vector_render_canvas_size")
-        layout.separator()
+        
         layout.prop(scene, "vector_render_apply_modifiers")
 
-        layout.prop(context.scene, "vector_render_draw_edges")
+        edgebox = layout.box()
+        edgebox.prop(context.scene, "vector_render_draw_edges")
         if scene.vector_render_draw_edges:
-            layout.prop(context.scene, "vector_render_edge_width")
-            layout.prop(context.scene, "vector_render_edge_colour")
-            layout.label("Plane edges:")
-            buttonrow = layout.row(align = True)
+            edgebox.prop(context.scene, "vector_render_edge_width")
+            edgebox.prop(context.scene, "vector_render_edge_colour")
+            edgebox.label("Plane edges:")
+            buttonrow = edgebox.row(align = True)
             buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "HIDE")
             buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "SHOW")
             if scene.vector_render_plane_edges == "HIDE":
-                layout.prop(context.scene, "vector_render_plane_edges_angle")
-            layout.label("Obscured edges:")
-            buttonrow = layout.row(align = True)
+                edgebox.prop(context.scene, "vector_render_plane_edges_angle")
+            edgebox.label("Obscured edges:")
+            buttonrow = edgebox.row(align = True)
             buttonrow.prop_enum(context.scene, "vector_render_hidden_lines", "HIDE")
             buttonrow.prop_enum(context.scene, "vector_render_hidden_lines", "DASH")
             buttonrow.prop_enum(context.scene, "vector_render_hidden_lines", "SHOW")
-            layout.separator()
 
-        layout.prop(context.scene, "vector_render_draw_faces")
+        facebox = layout.box()
+        facebox.prop(context.scene, "vector_render_draw_faces")
         if scene.vector_render_draw_faces:
-            row = layout.row()
+            row = facebox.row()
             row.prop(context.scene, "vector_render_force_face_colour")
             rowrow = row.row()
             rowrow.enabled = scene.vector_render_force_face_colour
             rowrow.prop(context.scene, "vector_render_face_colour")
+        
         layout.separator()
-
         layout.operator("render.vector_render")
 
 def register():
