@@ -7,6 +7,7 @@ The advantage over normal renders using raster graphics is that there is no reso
 The add-on has the following features:
 
 - Output formats: SVG (Scalable Vector Graphics) and Metapost
+- Animated SVG files (optional)
 - Support for perspective and orthographic projection
 - Rendering of mesh objects (with modifiers applied as an option)
 - Drawing of text labels with positions in 3D
