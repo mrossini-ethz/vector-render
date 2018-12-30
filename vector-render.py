@@ -164,6 +164,9 @@ class mpost_engine:
                 self.f.write("label(btex %.1f etex, (%f u, +0.45 u));" % (x / 10, x / 10));
                 self.f.write("label(btex %.1f etex, (%f u, -0.45 u));" % (x / 10, x / 10));
 
+    def new_frame(self):
+        pass
+
     def set_canvas_size(self, xmin, xmax, ymin, ymax):
         self.f.write("pickup pencircle scaled 0 pt;\n");
         self.f.write("draw (%f u, %f u)--(%f u, %f u)--(%f u, %f u)--(%f u, %f u)--cycle withcolor white;\n" % (xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax))
@@ -243,8 +246,11 @@ class mpost_engine:
 # SVG ENGINE CLASS --------------------------------------------------------------------------------------------------------------------------------------------
 
 class svg_engine:
-    def __init__(self, filename):
+    def __init__(self, filename, framecount = None, animationtime = None):
         self.f = open(filename, "w")
+        self.framecount = 0
+        self.frametotal = framecount
+        self.animationtime = animationtime
 
         # FIXME
         scene = bpy.context.scene
@@ -259,11 +265,18 @@ class svg_engine:
         # Header
         self.f.write('<svg version="1.1" baseProfile="full" width="%i" height="%i" xmlns="http://www.w3.org/2000/svg">\n' % (self.width, self.height))
         self.f.write('  <g stroke-linejoin="round" stroke-linecap="round">\n')
+        if self.animationtime:
+            self.f.write("    <animate id='frame_%i' attributeName='display' values='%s' dur='%fs' fill='freeze' begin='0s' repeatCount='indefinite'/>\n" % (self.framecount, "none;" * self.framecount + "inline;" + "none;" * (self.frametotal - self.framecount - 1), self.animationtime))
 
         self.linecolour = [gamma_correction(scene.vector_render_edge_colour[0]),
                            gamma_correction(scene.vector_render_edge_colour[1]),
                            gamma_correction(scene.vector_render_edge_colour[2])]
-
+    def new_frame(self):
+        self.f.write('  </g>\n\n')
+        self.framecount += 1
+        self.f.write('  <g stroke-linejoin="round" stroke-linecap="round">\n')
+        if self.animationtime:
+            self.f.write("    <animate id='frame_%i' attributeName='display' values='%s' dur='%fs' fill='freeze' begin='0s' repeatCount='indefinite'/>\n" % (self.framecount, "none;" * self.framecount + "inline;" + "none;" * (self.frametotal - self.framecount - 1), self.animationtime))
     def recalc(self, point):
         return (0.5 * self.width + point[0] * self.scale, 0.5 * self.height - point[1] * self.scale)
     def set_canvas_size(self, xmin, xmax, ymin, ymax):
@@ -1040,6 +1053,36 @@ class VectorRender(bpy.types.Operator):
 
     def execute(self, context):
         scene = context.scene
+        current_frame = scene.frame_current
+        start = scene.frame_start
+        end = scene.frame_end
+        frames = end - start + 1
+        animate = False
+
+        filename = scene.vector_render_file
+        if scene.vector_render_output_format == "MPOST":
+            m = mpost_engine(filename)
+        elif scene.vector_render_output_format == "SVG":
+            animate = scene.vector_render_animate
+            if animate:
+                m = svg_engine(filename, frames, frames / scene.render.fps)
+            else:
+                m = svg_engine(filename, None, None)
+
+        if animate:
+            for frame in range(start, end + 1):
+                scene.frame_set(frame)
+                self.draw_frame(context, m)
+                if frame != end:
+                    m.new_frame()
+            scene.frame_set(current_frame)
+        else:
+            self.draw_frame(context, m)
+
+        return {'FINISHED'}
+
+    def draw_frame(self, context, m):
+        scene = context.scene
         # Operator options
         remove_plane_edges = (scene.vector_render_plane_edges == "HIDE")
         edge_angle_limit = degrees(scene.vector_render_plane_edges_angle)
@@ -1226,12 +1269,6 @@ class VectorRender(bpy.types.Operator):
                 edgelist.pop(i)
                 edgelist_len -= 1
 
-        filename = scene.vector_render_file
-        if scene.vector_render_output_format == "MPOST":
-            m = mpost_engine(filename)
-        elif scene.vector_render_output_format == "SVG":
-            m = svg_engine(filename)
-
         if hidden_line_removal:
             # Determine the edge intersection points
             print("Intersecting lines ...")
@@ -1274,8 +1311,6 @@ class VectorRender(bpy.types.Operator):
             for lb in labellist:
                 lb.draw(m)
 
-        return {'FINISHED'}
-
 class VectorRenderPanel(bpy.types.Panel):
     """Creates a Panel in the Object properties window"""
     bl_label = "Vector Render"
@@ -1293,6 +1328,7 @@ class VectorRenderPanel(bpy.types.Panel):
     bpy.types.Scene.vector_render_output_format = bpy.props.EnumProperty(items = [("SVG", "SVG", "Scalable Vector Graphics"),
                                                                               ("MPOST", "Metapost", "Metapost")], default = "SVG")
     bpy.types.Scene.vector_render_canvas_size = bpy.props.BoolProperty(name = "Force dimensions", default = False)
+    bpy.types.Scene.vector_render_animate = bpy.props.BoolProperty(name = "Animate", default = False)
 
     # Drawing options
     bpy.types.Scene.vector_render_apply_modifiers = bpy.props.BoolProperty(name = "Apply modifiers", default = True)
@@ -1332,8 +1368,10 @@ class VectorRenderPanel(bpy.types.Panel):
             row = filebox.row(align = True)
             row.prop(context.scene, "vector_render_size")
             row.prop(context.scene, "vector_render_size_unit")
-            layout.prop(context.scene, "vector_render_canvas_size")
-        
+            filebox.prop(context.scene, "vector_render_canvas_size")
+        if scene.vector_render_output_format == "SVG":
+            filebox.prop(context.scene, "vector_render_animate")
+
         layout.prop(scene, "vector_render_apply_modifiers")
 
         edgebox = layout.box()
