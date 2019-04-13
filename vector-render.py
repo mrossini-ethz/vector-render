@@ -970,9 +970,9 @@ class polygon:
                     # diffuse
                     diffuse = -k_diffuse[c] * direction.dot(self.nn)
                     if diffuse > 0:
-                        I[0][c] += +diffuse * lo.color[c]
+                        I[0][c] += +diffuse * lo.color[c] * lo.energy
                     elif diffuse < 0:
-                        I[1][c] += -diffuse * lo.color[c]
+                        I[1][c] += -diffuse * lo.color[c] * lo.energy
 
                     # specular
                     #R = self.nn * -2.0 * direction.dot(self.nn) + direction
@@ -995,9 +995,9 @@ class polygon:
                         diffuse *= lo.distance / (lo.distance + direction.length)
 
                     if diffuse > 0:
-                        I[0][c] += +diffuse * lo.color[c]
+                        I[0][c] += +diffuse * lo.color[c] * lo.energy
                     elif diffuse < 0:
-                        I[1][c] += -diffuse * lo.color[c]
+                        I[1][c] += -diffuse * lo.color[c] * lo.energy
 
         # Front and back
         for i in range(2):
