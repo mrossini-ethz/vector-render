@@ -998,6 +998,22 @@ class polygon:
                         I[0][c] += +diffuse * lo.color[c] * lo.energy
                     elif diffuse < 0:
                         I[1][c] += -diffuse * lo.color[c] * lo.energy
+            elif lo.type == 'SPOT':
+                lamp_dir = direction
+                direction = self.centre - l.location
+                if lamp_dir.angle(direction) > lo.spot_size / 2:
+                    continue
+                for c in range(3):
+                    diffuse = -k_diffuse[c] * direction.dot(self.nn) / direction.length
+                    if lo.falloff_type == 'INVERSE_SQUARE':
+                        diffuse *= lo.distance ** 2 / (lo.distance ** 2 + direction.length ** 2)
+                    elif lo.falloff_type == 'INVERSE_LINEAR':
+                        diffuse *= lo.distance / (lo.distance + direction.length)
+
+                    if diffuse > 0:
+                        I[0][c] += +diffuse * lo.color[c] * lo.energy
+                    elif diffuse < 0:
+                        I[1][c] += -diffuse * lo.color[c] * lo.energy
 
         # Front and back
         for i in range(2):
