@@ -962,6 +962,8 @@ class polygon:
 
         # Iterate over lights
         for l in lights:
+            if l.hide_render:
+                continue
             lo = l.data
             direction = object_transform([0,0,-1], mathutils.Vector((0,0,0)), l.rotation_euler, [1, 1, 1])
 
