@@ -956,33 +956,35 @@ class polygon:
         I = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
         # Iterate over lights
         for l in lights:
-            direction = object_transform([0,0,-1], mathutils.Vector((0,0,0)), l.rotation_euler, [1, 1, 1])
             lo = l.data
-            # Iterate over RGB colors
-            for c in range(3):
-                # Ambient light, front and back face
-                #I[0][c] += k_ambient * lo.color[c]
-                #I[1][c] += k_ambient * lo.color[c]
+            direction = object_transform([0,0,-1], mathutils.Vector((0,0,0)), l.rotation_euler, [1, 1, 1])
 
-                # Phong shading model
-                # diffuse
-                diffuse = -k_diffuse[c] * direction.dot(self.nn)
-                if diffuse > 0:
-                    I[0][c] += +diffuse * lo.color[c]
-                elif diffuse < 0:
-                    I[1][c] += -diffuse * lo.color[c]
+            if lo.type == 'SUN':
+                # Iterate over RGB colors
+                for c in range(3):
+                    # Ambient light, front and back face
+                    #I[0][c] += k_ambient * lo.color[c]
+                    #I[1][c] += k_ambient * lo.color[c]
 
-                # specular
-                #R = self.nn * -2.0 * direction.dot(self.nn) + direction
-                #s = R.dot(V)
-                #if s > 0:
-                #    specular = k_specular[c] * (s ** alpha) * lo.color[c]
-                #    if specular > 0:
-                #        I[0][c] += specular
-                #else:
-                #    specular = k_specular[c] * ((-s) ** alpha) * lo.color[c]
-                #    if specular > 0:
-                #        I[1][c] += specular
+                    # Phong shading model
+                    # diffuse
+                    diffuse = -k_diffuse[c] * direction.dot(self.nn)
+                    if diffuse > 0:
+                        I[0][c] += +diffuse * lo.color[c]
+                    elif diffuse < 0:
+                        I[1][c] += -diffuse * lo.color[c]
+
+                    # specular
+                    #R = self.nn * -2.0 * direction.dot(self.nn) + direction
+                    #s = R.dot(V)
+                    #if s > 0:
+                    #    specular = k_specular[c] * (s ** alpha) * lo.color[c]
+                    #    if specular > 0:
+                    #        I[0][c] += specular
+                    #else:
+                    #    specular = k_specular[c] * ((-s) ** alpha) * lo.color[c]
+                    #    if specular > 0:
+                    #        I[1][c] += specular
 
         # Front and back
         for i in range(2):
