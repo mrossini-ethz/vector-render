@@ -938,7 +938,7 @@ class polygon:
     def shade(self, lights, camera):
         if self.shader:
             #k_ambient = self.shader.ambient
-            k_ambient = [0.0] * 3
+            k_ambient = self.shader.ambient
             k_diffuse = self.shader.diffuse_color
             #k_specular = self.shader.specular_color
             k_specular = [0.0] * 3
@@ -954,6 +954,12 @@ class polygon:
         V.normalize()
 
         I = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+
+        # Ambient light
+        for c in range(3):
+            I[0][c] = k_ambient * bpy.data.worlds["World"].ambient_color[c]
+            I[1][c] = k_ambient * bpy.data.worlds["World"].ambient_color[c]
+
         # Iterate over lights
         for l in lights:
             lo = l.data
@@ -962,12 +968,6 @@ class polygon:
             if lo.type == 'SUN':
                 # Iterate over RGB colors
                 for c in range(3):
-                    # Ambient light, front and back face
-                    #I[0][c] += k_ambient * lo.color[c]
-                    #I[1][c] += k_ambient * lo.color[c]
-
-                    # Phong shading model
-                    # diffuse
                     diffuse = -k_diffuse[c] * direction.dot(self.nn)
                     if diffuse > 0:
                         I[0][c] += +diffuse * lo.color[c] * lo.energy
@@ -986,6 +986,7 @@ class polygon:
                     #    if specular > 0:
                     #        I[1][c] += specular
             elif lo.type == 'POINT':
+                # Iterate over RGB colors
                 for c in range(3):
                     direction = self.centre - l.location
                     diffuse = -k_diffuse[c] * direction.dot(self.nn) / direction.length
@@ -1003,6 +1004,7 @@ class polygon:
                 direction = self.centre - l.location
                 if lamp_dir.angle(direction) > lo.spot_size / 2:
                     continue
+                # Iterate over RGB colors
                 for c in range(3):
                     diffuse = -k_diffuse[c] * direction.dot(self.nn) / direction.length
                     if lo.falloff_type == 'INVERSE_SQUARE':
