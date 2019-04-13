@@ -937,7 +937,6 @@ class polygon:
 
     def shade(self, lights, camera):
         if self.shader:
-            #k_ambient = self.shader.ambient
             k_ambient = self.shader.ambient
             k_diffuse = self.shader.diffuse_color
             #k_specular = self.shader.specular_color
@@ -945,7 +944,7 @@ class polygon:
             # Divide value by 5 to match it with blender's behaviour
             alpha = self.shader.alpha / 5.0
         else:
-            k_ambient = [0.0] * 3
+            k_ambient = 0.0
             k_diffuse = [0.8] * 3
             k_specular = [0.0] * 3
             alpha = 10.0
