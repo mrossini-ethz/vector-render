@@ -939,6 +939,7 @@ class polygon:
         if self.shader:
             k_ambient = self.shader.ambient
             k_diffuse = self.shader.diffuse_color
+            k_diffuse_intensity = self.shader.diffuse_intensity
             #k_specular = self.shader.specular_color
             k_specular = [0.0] * 3
             # Divide value by 5 to match it with blender's behaviour
@@ -969,9 +970,9 @@ class polygon:
                 for c in range(3):
                     diffuse = -k_diffuse[c] * direction.dot(self.nn)
                     if diffuse > 0:
-                        I[0][c] += +diffuse * lo.color[c] * lo.energy
+                        I[0][c] += +diffuse * lo.color[c] * lo.energy * k_diffuse_intensity
                     elif diffuse < 0:
-                        I[1][c] += -diffuse * lo.color[c] * lo.energy
+                        I[1][c] += -diffuse * lo.color[c] * lo.energy * k_diffuse_intensity
 
                     # specular
                     #R = self.nn * -2.0 * direction.dot(self.nn) + direction
@@ -995,9 +996,9 @@ class polygon:
                         diffuse *= lo.distance / (lo.distance + direction.length)
 
                     if diffuse > 0:
-                        I[0][c] += +diffuse * lo.color[c] * lo.energy
+                        I[0][c] += +diffuse * lo.color[c] * lo.energy * k_diffuse_intensity
                     elif diffuse < 0:
-                        I[1][c] += -diffuse * lo.color[c] * lo.energy
+                        I[1][c] += -diffuse * lo.color[c] * lo.energy * k_diffuse_intensity
             elif lo.type == 'SPOT':
                 lamp_dir = direction
                 direction = self.centre - l.location
@@ -1012,9 +1013,9 @@ class polygon:
                         diffuse *= lo.distance / (lo.distance + direction.length)
 
                     if diffuse > 0:
-                        I[0][c] += +diffuse * lo.color[c] * lo.energy
+                        I[0][c] += +diffuse * lo.color[c] * lo.energy * k_diffuse_intensity
                     elif diffuse < 0:
-                        I[1][c] += -diffuse * lo.color[c] * lo.energy
+                        I[1][c] += -diffuse * lo.color[c] * lo.energy * k_diffuse_intensity
 
         # Front and back
         for i in range(2):
