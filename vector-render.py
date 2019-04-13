@@ -1190,7 +1190,7 @@ class VectorRender(bpy.types.Operator):
                     if face_colour:
                         poly_obj.set_colour(face_colour)
                     else:
-                        if len(object.material_slots) > 0:
+                        if len(object.material_slots) > 0 and object.material_slots[poly.material_index].material:
                             poly_obj.set_colour(object.material_slots[poly.material_index].material.diffuse_color)
                     try:
                         poly_obj.set_shader(object.material_slots[poly.material_index].material)
