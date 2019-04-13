@@ -6,7 +6,7 @@ The advantage over normal renders using raster graphics is that there is no reso
 ## Features
 The add-on has the following features:
 
-- Output formats: SVG (Scalable Vector Graphics) and Metapost
+- Output formats: SVG (Scalable Vector Graphics) and MP (Metapost)
 - Animated SVG files (optional)
 - Support for perspective and orthographic projection
 - Rendering of mesh objects (with modifiers applied as an option)
@@ -17,15 +17,17 @@ The add-on has the following features:
   - shown normally
 - Hiding of edges within planes (using an angle limit)
 - Drawing of mesh faces (coloured by material as an option)
-- Shading using lamps (currently limited to sun lamps).
+- Shading using lamps
+  - Sun lamps
+  - Point lamps (limited support)
+  - Spot lamps (limited support)
 
 ## Limitations
 There are several limitations to the add-on which are mostly due to the nature of vector graphics:
 
+- Intersecting polygons/objects won't render properly
 - No smooth shading
-- Shading works only with sun lamps (as of now)
-- Intersecting polygons/objects won't work properly
-- No cast shadows.
+- No cast shadows
 
 ## Installation
 1. Download the latest [release](https://github.com/mrossini-ethz/vector-render/releases) or clone the repository into a directory of your convenience.
