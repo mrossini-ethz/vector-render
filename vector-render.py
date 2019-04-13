@@ -985,6 +985,19 @@ class polygon:
                     #    specular = k_specular[c] * ((-s) ** alpha) * lo.color[c]
                     #    if specular > 0:
                     #        I[1][c] += specular
+            elif lo.type == 'POINT':
+                for c in range(3):
+                    direction = self.centre - l.location
+                    diffuse = -k_diffuse[c] * direction.dot(self.nn) / direction.length
+                    if lo.falloff_type == 'INVERSE_SQUARE':
+                        diffuse *= lo.distance ** 2 / (lo.distance ** 2 + direction.length ** 2)
+                    elif lo.falloff_type == 'INVERSE_LINEAR':
+                        diffuse *= lo.distance / (lo.distance + direction.length)
+
+                    if diffuse > 0:
+                        I[0][c] += +diffuse * lo.color[c]
+                    elif diffuse < 0:
+                        I[1][c] += -diffuse * lo.color[c]
 
         # Front and back
         for i in range(2):
