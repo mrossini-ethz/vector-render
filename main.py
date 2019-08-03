@@ -445,7 +445,7 @@ class projector:
             self.scale = 1.0 / camera.data.ortho_scale
 
     def transform_to_camera_coords(self, vec):
-        return self.roti * vec - self.roti * self.cp
+        return self.roti @ vec - self.roti @ self.cp
 
     def project(self, v):
         # Convert the vector from global coordinates to camera coordinates
@@ -924,15 +924,15 @@ class polygon:
 
     def shade(self, lights, camera):
         if self.shader:
-            k_ambient = self.shader.ambient
+            k_ambient = 1.0
             k_diffuse = self.shader.diffuse_color
-            k_diffuse_intensity = self.shader.diffuse_intensity
+            k_diffuse_intensity = 1.0
             #k_specular = self.shader.specular_color
             k_specular = [0.0] * 3
             # Divide value by 5 to match it with blender's behaviour
-            alpha = self.shader.alpha / 5.0
+            alpha = 1.0
         else:
-            k_ambient = 0.0
+            k_ambient = 1.0
             k_diffuse = [0.8] * 3
             k_specular = [0.0] * 3
             alpha = 10.0
@@ -944,8 +944,8 @@ class polygon:
 
         # Ambient light
         for c in range(3):
-            I[0][c] = k_ambient * bpy.data.worlds["World"].ambient_color[c]
-            I[1][c] = k_ambient * bpy.data.worlds["World"].ambient_color[c]
+            I[0][c] = k_ambient * bpy.data.worlds["World"].color[c] * k_diffuse[c]
+            I[1][c] = k_ambient * bpy.data.worlds["World"].color[c] * k_diffuse[c]
 
         # Iterate over lights
         for l in lights:
@@ -1132,7 +1132,7 @@ class VectorRender(bpy.types.Operator):
         # Get the camera
         camera = scene.camera
         # Get the lights
-        lights = [o for o in scene.objects if o.type == 'LAMP']
+        lights = [o for o in scene.objects if o.type == 'LIGHT']
 
         # Prepare lists and trees for polygons and edges
         polylist = []
@@ -1149,7 +1149,7 @@ class VectorRender(bpy.types.Operator):
             if not object.type == "MESH" and not object.type == "CURVE":
                 continue
             # Filter hidden objects
-            if object.hide_render or not object.is_visible(scene):
+            if object.hide_render:
                 continue
             print("- Reading", object.name, "...")
             object_pos = object.location
@@ -1157,9 +1157,9 @@ class VectorRender(bpy.types.Operator):
             object_scl = object.scale
             # Apply the modifiers, if necessary
             if scene.vector_render_apply_modifiers:
-                mesh = object.to_mesh(scene, True, "RENDER")
+                mesh = object.to_mesh() # FIXME: This does not work!
             elif object.type == "CURVE":
-                mesh = object.to_mesh(scene, False, "RENDER")
+                mesh = object.to_mesh()
             else:
                 mesh = object.data
             # Iterate over polygons
@@ -1380,9 +1380,9 @@ class VectorRenderPanel(bpy.types.Panel):
         layout = self.layout
 
         filebox = layout.box()
-        filebox.label("File:")
+        filebox.label(text = "File:")
         filebox.prop(context.scene, "vector_render_file")
-        filebox.label("Format:")
+        filebox.label(text = "Format:")
         buttonrow = filebox.row(align = True)
         buttonrow.prop_enum(context.scene, "vector_render_output_format", "SVG")
         buttonrow.prop_enum(context.scene, "vector_render_output_format", "MPOST")
@@ -1401,13 +1401,13 @@ class VectorRenderPanel(bpy.types.Panel):
         if scene.vector_render_draw_edges:
             edgebox.prop(context.scene, "vector_render_edge_width")
             edgebox.prop(context.scene, "vector_render_edge_colour")
-            edgebox.label("Plane edges:")
+            edgebox.label(text = "Plane edges:")
             buttonrow = edgebox.row(align = True)
             buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "HIDE")
             buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "SHOW")
             if scene.vector_render_plane_edges == "HIDE":
                 edgebox.prop(context.scene, "vector_render_plane_edges_angle")
-            edgebox.label("Obscured edges:")
+            edgebox.label(text = "Obscured edges:")
             buttonrow = edgebox.row(align = True)
             buttonrow.prop_enum(context.scene, "vector_render_hidden_lines", "HIDE")
             buttonrow.prop_enum(context.scene, "vector_render_hidden_lines", "DASH")
