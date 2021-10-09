@@ -31,12 +31,12 @@ bl_info = {
     "author": "Marco Rossini",
     "version": (0, 0, 1),
     "warning": "This is an unreleased development version.",
-    "blender": (2, 7, 0),
+    "blender": (2, 83, 0),
     "location": "Properties > Render > Vector Render",
     "description": "Renders the camera view to a vector graphic such as SVG.",
     "tracker_url": "https://github.com/mrossini-ethz/vector-render/issues",
     "support": "COMMUNITY",
-    "category": "Render"
+    "category": "Render",
 }
 
 # GENERIC FUNCTIONS -------------------------------------------------------------------------------------------------------------------------------------------
@@ -458,7 +458,7 @@ class projector:
             self.scale = 1.0 / camera.data.ortho_scale
 
     def transform_to_camera_coords(self, vec):
-        return self.roti * vec - self.roti * self.cp
+        return self.roti @ vec - self.roti @ self.cp
 
     def project(self, v):
         # Convert the vector from global coordinates to camera coordinates
@@ -1162,7 +1162,7 @@ class VectorRender(bpy.types.Operator):
             if not object.type == "MESH" and not object.type == "CURVE":
                 continue
             # Filter hidden objects
-            if object.hide_render or not object.is_visible(scene):
+            if object.hide_render or not object.visible_get():
                 continue
             print("- Reading", object.name, "...")
             object_pos = object.location
@@ -1170,9 +1170,9 @@ class VectorRender(bpy.types.Operator):
             object_scl = object.scale
             # Apply the modifiers, if necessary
             if scene.vector_render_apply_modifiers:
-                mesh = object.to_mesh(scene, True, "RENDER")
+                mesh = object.to_mesh()
             elif object.type == "CURVE":
-                mesh = object.to_mesh(scene, False, "RENDER")
+                mesh = object.to_mesh()
             else:
                 mesh = object.data
             # Iterate over polygons
@@ -1243,7 +1243,7 @@ class VectorRender(bpy.types.Operator):
             if not object.type == "FONT":
                 continue
             # Filter hidden objects
-            if object.hide_render or not object.is_visible(scene):
+            if object.hide_render or not object.visible_get():
                 continue
             # Get the text of the object
             print("- Reading", object.name, "...")
@@ -1393,9 +1393,9 @@ class VectorRenderPanel(bpy.types.Panel):
         layout = self.layout
 
         filebox = layout.box()
-        filebox.label("File:")
+        filebox.label(text="File:")
         filebox.prop(context.scene, "vector_render_file")
-        filebox.label("Format:")
+        filebox.label(text="Format:")
         buttonrow = filebox.row(align = True)
         buttonrow.prop_enum(context.scene, "vector_render_output_format", "SVG")
         buttonrow.prop_enum(context.scene, "vector_render_output_format", "MPOST")
@@ -1414,13 +1414,13 @@ class VectorRenderPanel(bpy.types.Panel):
         if scene.vector_render_draw_edges:
             edgebox.prop(context.scene, "vector_render_edge_width")
             edgebox.prop(context.scene, "vector_render_edge_colour")
-            edgebox.label("Plane edges:")
+            edgebox.label(text="Plane edges:")
             buttonrow = edgebox.row(align = True)
             buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "HIDE")
             buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "SHOW")
             if scene.vector_render_plane_edges == "HIDE":
                 edgebox.prop(context.scene, "vector_render_plane_edges_angle")
-            edgebox.label("Obscured edges:")
+            edgebox.label(text="Obscured edges:")
             buttonrow = edgebox.row(align = True)
             buttonrow.prop_enum(context.scene, "vector_render_hidden_lines", "HIDE")
             buttonrow.prop_enum(context.scene, "vector_render_hidden_lines", "DASH")
