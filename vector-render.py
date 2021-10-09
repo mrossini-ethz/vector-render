@@ -31,12 +31,12 @@ bl_info = {
     "author": "Marco Rossini",
     "version": (0, 0, 1),
     "warning": "This is an unreleased development version.",
-    "blender": (2, 7, 0),
+    "blender": (2, 83, 0),
     "location": "Properties > Render > Vector Render",
     "description": "Renders the camera view to a vector graphic such as SVG.",
     "tracker_url": "https://github.com/mrossini-ethz/vector-render/issues",
     "support": "COMMUNITY",
-    "category": "Render"
+    "category": "Render",
 }
 
 # GENERIC FUNCTIONS -------------------------------------------------------------------------------------------------------------------------------------------
@@ -458,7 +458,7 @@ class projector:
             self.scale = 1.0 / camera.data.ortho_scale
 
     def transform_to_camera_coords(self, vec):
-        return self.roti * vec - self.roti * self.cp
+        return self.roti @ vec - self.roti @ self.cp
 
     def project(self, v):
         # Convert the vector from global coordinates to camera coordinates
@@ -937,18 +937,9 @@ class polygon:
 
     def shade(self, lights, camera):
         if self.shader:
-            k_ambient = self.shader.ambient
             k_diffuse = self.shader.diffuse_color
-            k_diffuse_intensity = self.shader.diffuse_intensity
-            #k_specular = self.shader.specular_color
-            k_specular = [0.0] * 3
-            # Divide value by 5 to match it with blender's behaviour
-            alpha = self.shader.alpha / 5.0
         else:
-            k_ambient = 0.0
             k_diffuse = [0.8] * 3
-            k_specular = [0.0] * 3
-            alpha = 10.0
 
         V = camera - self.centre
         V.normalize()
@@ -957,50 +948,41 @@ class polygon:
 
         # Ambient light
         for c in range(3):
-            I[0][c] = k_ambient * bpy.data.worlds["World"].ambient_color[c]
-            I[1][c] = k_ambient * bpy.data.worlds["World"].ambient_color[c]
+            I[0][c] = bpy.data.worlds["World"].color[c]
+            I[1][c] = bpy.data.worlds["World"].color[c]
 
         # Iterate over lights
         for l in lights:
             if l.hide_render:
                 continue
             lo = l.data
-            direction = object_transform([0,0,-1], mathutils.Vector((0,0,0)), l.rotation_euler, [1, 1, 1])
+            direction = object_transform([0, 0, -1], mathutils.Vector((0, 0, 0)), l.rotation_euler, [1, 1, 1])
+            energy = lo.energy / 1000
 
             if lo.type == 'SUN':
                 # Iterate over RGB colors
                 for c in range(3):
                     diffuse = -k_diffuse[c] * direction.dot(self.nn)
-                    if diffuse > 0:
-                        I[0][c] += +diffuse * lo.color[c] * lo.energy * k_diffuse_intensity
-                    elif diffuse < 0:
-                        I[1][c] += -diffuse * lo.color[c] * lo.energy * k_diffuse_intensity
 
-                    # specular
-                    #R = self.nn * -2.0 * direction.dot(self.nn) + direction
-                    #s = R.dot(V)
-                    #if s > 0:
-                    #    specular = k_specular[c] * (s ** alpha) * lo.color[c]
-                    #    if specular > 0:
-                    #        I[0][c] += specular
-                    #else:
-                    #    specular = k_specular[c] * ((-s) ** alpha) * lo.color[c]
-                    #    if specular > 0:
-                    #        I[1][c] += specular
+                    if diffuse > 0:
+                        I[0][c] += +diffuse * lo.color[c] * energy
+                    elif diffuse < 0:
+                        I[1][c] += -diffuse * lo.color[c] * energy
             elif lo.type == 'POINT':
                 # Iterate over RGB colors
                 for c in range(3):
                     direction = self.centre - l.location
                     diffuse = -k_diffuse[c] * direction.dot(self.nn) / direction.length
+
                     if lo.falloff_type == 'INVERSE_SQUARE':
                         diffuse *= lo.distance ** 2 / (lo.distance ** 2 + direction.length ** 2)
                     elif lo.falloff_type == 'INVERSE_LINEAR':
                         diffuse *= lo.distance / (lo.distance + direction.length)
 
                     if diffuse > 0:
-                        I[0][c] += +diffuse * lo.color[c] * lo.energy * k_diffuse_intensity
+                        I[0][c] += +diffuse * lo.color[c] * energy
                     elif diffuse < 0:
-                        I[1][c] += -diffuse * lo.color[c] * lo.energy * k_diffuse_intensity
+                        I[1][c] += -diffuse * lo.color[c] * energy
             elif lo.type == 'SPOT':
                 lamp_dir = direction
                 direction = self.centre - l.location
@@ -1015,9 +997,9 @@ class polygon:
                         diffuse *= lo.distance / (lo.distance + direction.length)
 
                     if diffuse > 0:
-                        I[0][c] += +diffuse * lo.color[c] * lo.energy * k_diffuse_intensity
+                        I[0][c] += +diffuse * lo.color[c] * energy
                     elif diffuse < 0:
-                        I[1][c] += -diffuse * lo.color[c] * lo.energy * k_diffuse_intensity
+                        I[1][c] += -diffuse * lo.color[c] * energy
 
         # Front and back
         for i in range(2):
@@ -1117,6 +1099,7 @@ class VectorRender(bpy.types.Operator):
         return {'FINISHED'}
 
     def draw_frame(self, context, m):
+        print("Rendering...")
         scene = context.scene
         # Operator options
         remove_plane_edges = (scene.vector_render_plane_edges == "HIDE")
@@ -1139,13 +1122,10 @@ class VectorRender(bpy.types.Operator):
             face_colour = scene.vector_render_face_colour
         use_lights = scene.vector_render_use_lights
 
-        # Get the scene
-        # FIXME: use correct scene
-        scene = bpy.data.scenes["Scene"]
         # Get the camera
         camera = scene.camera
         # Get the lights
-        lights = [o for o in scene.objects if o.type == 'LAMP']
+        lights = [o for o in scene.objects if o.type == 'LIGHT']
 
         # Prepare lists and trees for polygons and edges
         polylist = []
@@ -1162,7 +1142,7 @@ class VectorRender(bpy.types.Operator):
             if not object.type == "MESH" and not object.type == "CURVE":
                 continue
             # Filter hidden objects
-            if object.hide_render or not object.is_visible(scene):
+            if object.hide_render or not object.visible_get():
                 continue
             print("- Reading", object.name, "...")
             object_pos = object.location
@@ -1170,9 +1150,9 @@ class VectorRender(bpy.types.Operator):
             object_scl = object.scale
             # Apply the modifiers, if necessary
             if scene.vector_render_apply_modifiers:
-                mesh = object.to_mesh(scene, True, "RENDER")
+                mesh = object.to_mesh()
             elif object.type == "CURVE":
-                mesh = object.to_mesh(scene, False, "RENDER")
+                mesh = object.to_mesh()
             else:
                 mesh = object.data
             # Iterate over polygons
@@ -1197,8 +1177,9 @@ class VectorRender(bpy.types.Operator):
                             poly_obj.set_colour(object.material_slots[poly.material_index].material.diffuse_color)
                     try:
                         poly_obj.set_shader(object.material_slots[poly.material_index].material)
-                    except:
+                    except Exception:
                         pass
+
                     if use_lights and len(lights) > 0:
                         poly_obj.shade(lights, camera.location)
                     if polytree:
@@ -1243,7 +1224,7 @@ class VectorRender(bpy.types.Operator):
             if not object.type == "FONT":
                 continue
             # Filter hidden objects
-            if object.hide_render or not object.is_visible(scene):
+            if object.hide_render or not object.visible_get():
                 continue
             # Get the text of the object
             print("- Reading", object.name, "...")
@@ -1393,9 +1374,9 @@ class VectorRenderPanel(bpy.types.Panel):
         layout = self.layout
 
         filebox = layout.box()
-        filebox.label("File:")
+        filebox.label(text="File:")
         filebox.prop(context.scene, "vector_render_file")
-        filebox.label("Format:")
+        filebox.label(text="Format:")
         buttonrow = filebox.row(align = True)
         buttonrow.prop_enum(context.scene, "vector_render_output_format", "SVG")
         buttonrow.prop_enum(context.scene, "vector_render_output_format", "MPOST")
@@ -1414,13 +1395,13 @@ class VectorRenderPanel(bpy.types.Panel):
         if scene.vector_render_draw_edges:
             edgebox.prop(context.scene, "vector_render_edge_width")
             edgebox.prop(context.scene, "vector_render_edge_colour")
-            edgebox.label("Plane edges:")
+            edgebox.label(text="Plane edges:")
             buttonrow = edgebox.row(align = True)
             buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "HIDE")
             buttonrow.prop_enum(context.scene, "vector_render_plane_edges", "SHOW")
             if scene.vector_render_plane_edges == "HIDE":
                 edgebox.prop(context.scene, "vector_render_plane_edges_angle")
-            edgebox.label("Obscured edges:")
+            edgebox.label(text="Obscured edges:")
             buttonrow = edgebox.row(align = True)
             buttonrow.prop_enum(context.scene, "vector_render_hidden_lines", "HIDE")
             buttonrow.prop_enum(context.scene, "vector_render_hidden_lines", "DASH")
